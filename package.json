@@ -1,0 +1,53 @@
+{
+	"name": "obsidian-collab",
+	"version": "1.0.0",
+	"description": "",
+	"main": "main.js",
+	"scripts": {
+		"test": "node esbuild.config.mjs test",
+		"start-obsidian": "node src/start-obsidian.cjs",
+		"dev": "node esbuild.config.mjs",
+		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
+		"version": "node version-bump.mjs && git add manifest.json versions.json"
+	},
+	"keywords": [],
+	"author": "O-willis",
+	"license": "GPL-3.0",
+	"dependencies": {
+		"@types/expect-puppeteer": "^5.0.4",
+		"@types/jest-environment-puppeteer": "^5.0.4"
+	},
+	"devDependencies": {
+		"@types/node": "^16.11.6",
+		"@typescript-eslint/eslint-plugin": "^5.29.0",
+		"@typescript-eslint/parser": "^5.29.0",
+		"builtin-modules": "3.3.0",
+		"obsidian": "latest",
+		"electron": "^26.1.0",
+		"esbuild": "^0.17.0",
+		"typescript": "^5.0",
+		"tslib": "^2.3.0"
+	},
+	"eslintConfig": {
+		"root": true,
+		"parser": "@typescript-eslint/parser",
+		"env": { "node": true },
+		"plugins": ["@typescript-eslint"],
+		"extends": [
+			  "eslint:recommended",
+			  "plugin:@typescript-eslint/eslint-recommended",
+			  "plugin:@typescript-eslint/recommended"
+		],
+		"parserOptions": { "sourceType": "module" },
+		"rules": {
+			  "no-case-declarations": "off",
+			  "no-unused-vars": "off",
+			  "@typescript-eslint/ban-ts-comment": "off",
+			  "@typescript-eslint/no-empty-function": "off",
+			  "@typescript-eslint/no-explicit-any": "off",
+			  "@typescript-eslint/no-inferrable-types": "off",
+			  "@typescript-eslint/no-non-null-assertion": "off",
+			  "@typescript-eslint/no-unused-vars": ["error", { "args": "none" }]
+		}
+	}
+}

@@ -1,0 +1,14 @@
+{
+	"id": "collab",
+	"name": "Collab",
+	"version": "1.0.0",
+	"minAppVersion": "1.0.0",
+	"description": "Collab is a plugin for Obsidian which lets you run a local http server to share and collaboration on your vault with other people. The idea is a combination of Obsidian publish, but intended for synchronized collaboration, where the changes will be saved onto the host's local vault. The goal of this plugin is to bring webapp customization and synchronized collaboration to the user, while supporting as many features of obsidian as possible. This includes themes, dataview, canvas/graph view, etc.",
+	"author": "O-willis",
+	"authorUrl": "https://github.com/O-Willis",
+	"fundingUrl": {
+		"Paypal": "https://www.paypal.com/donate/?business=X64US5U2R8EQS&no_recurring=0&item_name=Hi%21+I%27m+a+Computer+Science+engineer+aspiring+to+push+Machine+Learning+boundaries.%0ACurrently+doing+Obsidian+plugins+and+Web+Dev.&currency_code=USD"
+	},
+	"updateNote": "Initialization",
+	"isDesktopOnly": true
+}

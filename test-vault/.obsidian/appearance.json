@@ -1,0 +1,13 @@
+{
+  "accentColor": "",
+  "theme": "obsidian",
+  "showViewHeader": true,
+  "cssTheme": "",
+  "nativeMenus": false,
+  "translucency": false,
+  "enabledCssSnippets": [
+    "background",
+    "mermaid"
+  ],
+  "baseFontSize": 10
+}

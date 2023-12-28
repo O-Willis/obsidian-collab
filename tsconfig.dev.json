@@ -1,0 +1,26 @@
+{
+	"compilerOptions": {
+		"baseUrl": "./src",
+		"outDir": "test-vault/.obsidian/plugins/collab",
+		"module": "ESNext",
+		"target": "ESNext",
+		"allowJs": false,
+		"strict": true,
+		"removeComments": false,
+		"noImplicitAny": true,
+		"moduleResolution": "node",
+		"importHelpers": false,
+		"isolatedModules": true,
+		"allowSyntheticDefaultImports": true,
+		"strictNullChecks": true,
+		"lib": ["DOM", "ES5", "ES6", "ES7", "scripthost"]
+	},
+	"include": ["**/*.ts"],
+	"exclude": ["**/*.js"],
+	"watchOptions": {
+		"watchDirectory": "usefsevents"
+	},
+	"buildOptions": {
+		"incremental": true
+	}
+}

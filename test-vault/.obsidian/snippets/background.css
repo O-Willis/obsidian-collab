@@ -1,0 +1,54 @@
+/* Gradient Background */
+.markdown-preview-view, .markdown-source-view {
+    z-index: 0;
+    background-color: rgb(147,34,195);
+	background: linear-gradient(0deg, rgba(147,34,195,0.8) 0%, rgba(84,34,186,0.7) 16%, rgba(29,37,148,0.6) 34%, rgba(15,19,77,0.6) 64%, rgba(0,0,0,0.2) 89%);
+}
+
+.markdown-preview-view::after {
+    /* content: "";
+    position: fixed;
+    background: rgb(2,0,36);
+	background: linear-gradient(90deg, rgba(2,0,36,1) 0%, rgba(16,9,121,1) 50%, rgba(154,0,255,1) 100%);
+	background-image: url(https://images.alphacoders.com/129/1299554.jpg);
+    background-repeat: no-repeat;
+    background-size: auto;
+	background-attachment: fixed;
+	background-position: center;
+    filter: blur(10px) brightness(50%) saturate(70%);
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0; */
+    z-index: -1;
+}
+
+
+.markdown-source-view::after {
+    /* content: "";
+    position: fixed;
+    background: rgb(2,0,36);
+	background: linear-gradient(90deg, rgba(2,0,36,1) 0%, rgba(16,9,121,1) 50%, rgba(154,0,255,1) 100%);
+	background-image: url(https://images.alphacoders.com/129/1299554.jpg);
+    background-repeat: no-repeat;
+    background-size: auto;
+	background-attachment: fixed;
+	background-position: center;
+    filter: blur(10px) brightness(50%) saturate(70%);
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0; */
+    z-index: -1;
+}
+
+/* Changes the color of the scroll bar*/
+/* .cm-scroller {
+	background-color: #F5F2E8;
+} */
+
+/* Side Gradient*/
+/* .markdown-reading-view > .markdown-preview-view {
+    background-color: rgb(2,0,36);
+	background: linear-gradient(90deg, rgba(2,0,36,1) 0%, rgba(61,9,121,1) 42%, rgba(209,0,255,1) 100%);
+}  */

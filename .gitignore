@@ -1,0 +1,25 @@
+# IDE
+*.iml
+.idea
+.nova
+.vscode
+
+# npm
+node_modules
+package-lock.json
+
+# build
+out
+
+# obsidian
+data.json
+
+# testing
+tests/*/
+!tests/vault/
+tests/vault/.obsidian/plugins/*/*
+!tests/vault/.obsidian/plugins/*/data.json
+tests/vault/.obsidian/workspace.json
+tests/vault/.obsidian/workspaces.json
+tests/vault/.obsidian/app.json
+tests/vault/.obsidian/graph.json
