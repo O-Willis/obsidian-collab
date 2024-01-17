@@ -33,10 +33,17 @@ Install from Obsidian Community Plugins: [Open in Obsidian](https://obsidian.md/
 
 ## Contributing
 
-If you have any ideas, suggestions or bugs, please feel free to submit an issue [using this link](https://github.com/Pr0dt0s/obsidian-html-server/issues/new)!
+If you have any ideas, suggestions or bugs, please feel free to submit an issue [using this link](https://github.com/O-Willis/obsidian-collab/issues/new)!
 
 If you want to start work and contribute, please feel free to create a PR!
 <br>(I'll be adding a PR Guide soon!)
+
+## References
+Alot of the code from this plugin is inspired by the following repos:
+- [Obsidian HTML Server Plugin](https://github.com/Pr0dt0s/obsidian-html-server)
+- [Obsidian Webpage Export Plugin](https://github.com/KosmosisDire/obsidian-webpage-export)
+
+Please go and support them as without their implementations, this plugin wouldn't be possible!
 
 ## Support This Plugin
 

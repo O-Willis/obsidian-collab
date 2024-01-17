@@ -1,0 +1,114 @@
+/* ===========================================
+   ===========  SPINNER ANIMATION  ===========
+   =========================================== */
+.custom-loader {
+	animation: none;
+	border-width: 0;
+	margin: 20px auto;
+}
+
+.spinner {
+	color: rgba(0,174,239,.8);
+	position: relative;
+	height:60px;
+	width:60px;
+	margin: 0 auto;
+	-webkit-animation: rotation .6s infinite linear;
+	-moz-animation: rotation .6s infinite linear;
+	-o-animation: rotation .6s infinite linear;
+	animation: rotation .6s infinite linear;
+	border-left:6px solid rgba(0,174,239,.15);
+	border-right:6px solid rgba(0,174,239,.15);
+	border-bottom:6px solid rgba(0,174,239,.15);
+	border-top:6px solid rgba(0,174,239,.8);
+	border-radius:100%;
+	
+}
+
+@-webkit-keyframes rotation {
+	from {-webkit-transform: rotate(0deg);}
+	to {-webkit-transform: rotate(359deg);}
+}
+@-moz-keyframes rotation {
+	from {-moz-transform: rotate(0deg);}
+	to {-moz-transform: rotate(359deg);}
+}
+@-o-keyframes rotation {
+	from {-o-transform: rotate(0deg);}
+	to {-o-transform: rotate(359deg);}
+}
+@keyframes rotation {
+	from {transform: rotate(0deg);}
+	to {transform: rotate(359deg);}
+}
+
+/* ===========================================
+   ============  CLOUD ANIMATION  ============
+   =========================================== */
+.cloud-container {
+	animation: none;
+	border-width: 0;
+	margin: 40px auto;
+	align-items: center;
+}
+
+.cloud_float, cloud_float_3 {
+	height: 60px; width: 60px;
+	right: 25px; top: 30px;
+	animation: move 6s ease infinite;
+	transform: scale(0.95);
+	@include border-radius(50%);
+	position: relative;
+	background: var(--interactive-accent);
+	border-radius: 50%;
+	box-shadow:
+		var(--interactive-accent) 65px -15px 0 -5px, 
+		var(--interactive-accent) 25px -25px, 
+		var(--interactive-accent) 30px 10px, 
+		var(--interactive-accent) 60px 15px 0 -10px, 
+		var(--interactive-accent) 85px 5px 0 -5px;
+}
+
+.cloud_float_2 {
+    scale: 60%;
+    height: 60px; width: 60px;
+    left: 40px; bottom: 20px;
+    animation: move 6s ease infinite;
+	transform: scale(0.95);
+	@include border-radius(50%);
+	position: relative;
+    background: var(--color-accent-1);
+    border-radius: 50%;
+    box-shadow:
+        var(--color-accent-1) 65px -15px 0 -5px, 
+        var(--color-accent-1) 25px -25px, 
+        var(--color-accent-1) 30px 10px, 
+        var(--color-accent-1) 60px 15px 0 -10px, 
+        var(--color-accent-1) 85px 5px 0 -5px;
+}
+
+.cloud_float_3 {
+    scale: 40%;
+    height: 60px; width: 60px;
+    right: 60px; bottom: 70px;
+    animation: move_2 6s ease infinite;
+	transform: scale(0.95);
+	@include border-radius(50%);
+	position: relative;
+    background: var(--color-accent-1);
+    border-radius: 50%;
+    box-shadow:
+        var(--color-accent-1) 65px -15px 0 -5px, 
+        var(--color-accent-1) 20px -25px, 
+        var(--color-accent-1) 30px 10px, 
+        var(--color-accent-1) 60px 15px 0 -10px, 
+        var(--color-accent-1) 85px 5px 0 -5px;
+}
+
+@keyframes move{
+	50% { transform: translateY(-40px);}
+}
+
+@keyframes move_2{
+	50% { transform: translateY(-80px);}
+}

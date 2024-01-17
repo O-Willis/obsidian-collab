@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Title</title>
+</head>
+<body>
+<div class="App">
+	<p>Welcome to the editor!</p>
+	<select id="editor-mode" onchange="changeEditorMode()">
+		<option value="reading">Reading View</option>
+		<option value="editing">Editing View</option>
+		<option value="source">Source Mode</option>
+	</select>
+	<!--      <div class="tab-button-container">-->
+	<!--        <button title="HTML">HTML</button>-->
+	<!--        <button title="CSS">CSS</button>-->
+	<!--        <button title="JavaScript">JavaScript</button>-->
+	<!--      </div>-->
+	<div class="editor-container">
+	</div>
+</div>
+<div id="html-editor" onchange="saveText()" style="border: 2px solid #adadad; margin-left: 20px; max-width: 600px">
+	<p> Some text to change </p>
+</div>
+<script>
+	function changeEditorMode() {
+		var modeDropdown = document.getElementById("editor-mode");
+		var selectedMode = modeDropdown.options[modeDropdown.selectedIndex].value;
+
+		// Display text based on selected mode
+		// var displayText = document.getElementById("display-text");
+		// switch (selectedMode) {
+		//     case "reading":
+		//         displayText.innerText = "You are in Reading View.";
+		//         break;
+		//     case "editing":
+		//         displayText.innerText = "You are in Editing View.";
+		//         break;
+		//     case "source":
+		//         displayText.innerText = "You are in Source Mode.";
+		//         break;
+		// }
+
+		// Enable or disable contenteditable based on selected mode
+		var htmlEditor = document.getElementById("html-editor");
+		htmlEditor.contentEditable = (selectedMode === "editing" || selectedMode === "source");
+		console.log(htmlEditor.contentEditable);
+	}
+
+	function sendContentUpdate() {
+		const htmlContent = document.getElementById('html-editor').innerHTML;
+
+		console.log("Update sent");
+
+		fetch('/update-html-endpoint', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ htmlContent: htmlContent })
+		}).then((response) => {
+			if (!response.ok) {
+				throw new Error(`HTTP error! status: ${response.status}`);
+			}
+            return response.json();
+        })
+        .then(data => {
+        	console.log("Content update response:", data);
+        })
+        .catch(error => {
+        	console.error("Error sending content update:", error);
+        });
+	}
+	// Call sendContentUpdate every 30 seconds
+	setInterval(sendContentUpdate, 10000);
+</script>
+</body>
+</html>
