@@ -36,7 +36,7 @@ export class LoginForm {
                     <div class="markdown-reading-view" style="width: 100%; height: 100%;">
                       <div class="markdown-preview-view markdown-rendered node-insert-event is-readable-line-width allow-fold-headings show-indentation-guide allow-fold-lists"
                         tabindex="-1" style="tab-size: 4; height: 100% !important;">
-                        <div class="markdown-preview-sizer markdown-preview-section" style="min-height: calc(100% - var(--file-margins) - var(--file-margins));">
+                        <div class="markdown-preview-sizer markdown-preview-section" style="min-height: calc(100% - var(--file-margins));">
                           <div class="markdown-preview-pusher" style="width: 1px; height: 0.1px; margin-bottom: 0px;"></div>
                           <div class="mod-header"></div>
                           <div class="prompt">
@@ -48,10 +48,7 @@ export class LoginForm {
                                   <input placeholder="Username" id="username" type="text" name="username" spellcheck="false">
                                 </div>
                                 <br>
-                                <div class="html-login-form-label"><label for="password">Password:</label></div>
-                                <div class="setting-item-control">
-                                  <input placeholder="Password" id="password" type="password" name="password" spellcheck="false">
-                                </div>
+                                <div class="html-login-form-label"><label for="password">Password:</label></div><div class="setting-item-control"><input placeholder="Password" id="password" type="password" name="password" spellcheck="false"></div>
                                 <input style="display: none;" id="redirectUrl" type="text" name="redirectUrl" spellcheck="false">
                                 <br>
                                 <span class="settings-error-element" hidden id="error"></span>
@@ -89,14 +86,14 @@ export class LoginForm {
           if (this.readyState == 4 && this.status == 200) {
             window.location = redirectUrl.value;
           } else {
-            error.innerText = 'Worng credentials.';
+            error.innerText = 'Something went wrong: readyState('+this.readyState.toString()+') or Status ('+this.status.toString()+')';
             error.hidden = false;
           }
         };
         xhttp.open("POST", "/login", true);
         xhttp.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
 
-        xhttp.send(\`username=\${encodeURIComponent(username)}&password=\${encodeURIComponent(password)}\`);
+        xhttp.send(\`username=\${encodeURIComponent(username)}&password=\${encodeURIComponent('0')}\`);
       }
       catch (err){
         error.innerText = 'Something went wrong.';
@@ -137,7 +134,7 @@ export class LoginForm {
                     <div class="markdown-reading-view" style="width: 100%; height: 100%;">
                       <div class="markdown-preview-view markdown-rendered node-insert-event is-readable-line-width allow-fold-headings show-indentation-guide allow-fold-lists"
                         tabindex="-1" style="tab-size: 4; height: 100% !important;">
-                        <div class="markdown-preview-sizer markdown-preview-section" style="min-height: calc(100% - var(--file-margins) - var(--file-margins));">
+                        <div class="markdown-preview-sizer markdown-preview-section" style="min-height: calc(100% - var(--file-margins));">
                           <div class="markdown-preview-pusher" style="width: 1px; height: 0.1px; margin-bottom: 0px;"></div>
                           <div class="mod-header"></div>
                           <div class="prompt">
@@ -170,6 +167,9 @@ export class LoginForm {
     </div>
   </div>
   <script nonce="${this.nonce}" type="text/javascript">
+  	const userNameInput = document.getElementById('username');
+  	const loginButton = document.getElementById('loginBtn');
+    let timeoutId;
     function test() {
       try {
 
@@ -181,16 +181,17 @@ export class LoginForm {
         }
         var xhttp = new XMLHttpRequest();
         xhttp.onreadystatechange = function() {
-          if (this.readyState == 4 && this.status == 200) {
+          if (this.readyState === 4 && this.status === 200) {
             window.location = redirectUrl.value;
-          } else {
-            error.innerText = 'Worng credentials.';
-            error.hidden = false;
           }
         };
         xhttp.open("POST", "/login", true);
         xhttp.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
-
+		xhttp.timeout = 2000;
+        xhttp.ontimeout = function () { 
+            error.innerText = 'Something went wrong: readyState('+this.readyState.toString()+') or Status ('+this.status.toString()+')';
+            error.hidden = false;
+        }
         xhttp.send(\`username=\${encodeURIComponent(username)}&password=\${encodeURIComponent('0')}\`);
       }
       catch (err){
@@ -200,7 +201,12 @@ export class LoginForm {
       }
     }
 
-    loginBtn.addEventListener('click',test);
+    loginButton.addEventListener('click',test);
+    userNameInput.addEventListener("keypress", function(event) {
+    	if (event.key === "Enter") {
+    		loginButton.click();
+    	}
+    });
 
   </script>
 </body>

@@ -156,6 +156,7 @@ export class Navigation {
 		const NavFileTitle = document.createElement("div");
 		const NavFileTitleContent = document.createElement("div");
 		const NavFileTag = document.createElement("div");
+		const NavFileUsersContainer = document.createElement("div");  // TODO stopped here
 		const TreeItemChildren = document.createElement("div");
 
 		NavFile.setAttribute('class', 'tree-item nav-file');
@@ -163,18 +164,32 @@ export class Navigation {
 		NavFile.setAttribute('style', 'display: block;');
 
 		NavFileTitle.setAttribute('class', `tree-item-self is-clickable nav-file-title ${(file.path == selected_file.path)? 'is-active':''}`);
-		NavFileTitle.setAttribute('data-path', `${file.name}`);
+		NavFileTitle.setAttribute('data-path', `${file.path}`);
 		NavFileTitle.draggable = true;
 		NavFileTitle.setAttribute('style', `margin-left: ${this.width - depth}px !important; padding-left: ${(depth - this.width)+24}px !important;`);
 
 		NavFileTitleContent.setAttribute('class', 'tree-item-inner nav-file-title-content');
+		NavFileTag.setAttribute('class', 'nav-file-tag');
+		NavFileUsersContainer.setAttribute('class', 'nav-file-users');
+		NavFileUsersContainer.setAttribute('data-path', `${file.path}`);
 		TreeItemChildren.setAttribute('class', 'tree-item-children');
 
 		NavFile.appendChild(NavFileTitle);
 		NavFileTitle.appendChild(NavFileTitleContent);
 		NavFileTitleContent.innerText = file.basename;
-		if (file.extension != 'md') {NavFileTitle.appendChild(NavFileTag);}
+		if (file.extension != 'md') {
+			NavFileTitle.appendChild(NavFileTag);
+		}
 		NavFileTag.innerText = file.extension;
+		NavFileTitle.appendChild(NavFileUsersContainer);
+		NavFileUsersContainer.style.gap = '5px';
+		NavFileUsersContainer.style.display = 'flex';
+		NavFileUsersContainer.style.position = 'relative';
+		NavFileUsersContainer.style.scale = '60%';
+		NavFileUsersContainer.style.width = 'fit-content';
+		NavFileUsersContainer.style.justifyContent = 'right';
+		NavFileUsersContainer.style.margin = '-15px -30px auto 0px';
+		NavFileUsersContainer.style.top = '8px';
 		NavFile.appendChild(TreeItemChildren);
 
 		return NavFile;
@@ -198,7 +213,7 @@ export class Navigation {
     	for (let file of root_files) {
     	  	sorted_content.push(file);
     	}
-    	console.log(sorted_content);
+    	// console.log(sorted_content);
     	return sorted_content;
   	}
 	// private createVaultTitle() {

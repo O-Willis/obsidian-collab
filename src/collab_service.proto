@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package collab;
+
+// Define a message for file content updates
+message FileContentUpdate {
+	string filePath = 1;
+	string content = 2;
+}
+
+// The collaboration service definition with a bi-directional streaming RPC
+service CollabService {
+	rpc Collaborate(stream FileContentUpdate) returns (stream FileContentUpdate);
+}

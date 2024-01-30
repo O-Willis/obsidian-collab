@@ -15,7 +15,7 @@
               "state": {
                 "file": "file1.md",
                 "mode": "source",
-                "source": true
+                "source": false
               }
             }
           }
@@ -69,7 +69,8 @@
       }
     ],
     "direction": "horizontal",
-    "width": 200
+    "width": 293.5,
+    "collapsed": true
   },
   "right": {
     "id": "7dcd8d2e2ed45ffd",
@@ -151,11 +152,14 @@
   },
   "active": "3ea58abb7cda85a9",
   "lastOpenFiles": [
-    "html_templates/navigation.html",
+    "Export/callouts.md",
     "file1.md",
+    "Export/html/index-page.html",
+    "Export/file1.md",
     "Welcome.md",
-    "Callouts.md",
     "Test File.md",
+    "html_templates/navigation.html",
+    "Callouts.md",
     "html/Index.md",
     "Pasted_image_2.png",
     "img.png",
@@ -181,12 +185,10 @@
     "z/y/a/Test.md",
     "z/y/b",
     "z/y/a",
-    "z/y",
     "z/is/b/Test.md",
     "z/is/b/Pasted image 20231122200402.png",
     "z/is/b/file resolver test.md",
     "z/is/a/Test.md",
-    "z/is/b",
     "first/is/b/Pasted image 20231122200402.png",
     "first/is/b/Test.md",
     "first/is/b/file resolver test.md",
@@ -196,7 +198,6 @@
     "test.canvas",
     "this/is/b/Test.md",
     "this/is/b/Pasted image 20231122200402.png",
-    "this/is/b/file resolver test.md",
     "Export/this/is/b/pasted-image-20231122200402.png",
     "Export/test.canvas"
   ]

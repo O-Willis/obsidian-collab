@@ -27,6 +27,18 @@ div.workspace-leaf-resize-handle {
     
 } */
 
+/* =======================  MODAL DESIGN  ======================= */
+/* div#warningModal div.modal-close-button::before {
+	color: white;
+} */
+
+div#warningModal div.modal-close-button::before {
+
+	&:hover {
+		color: #dab561;
+	}
+}
+
 /* =======================  WEBPAGE HTML FUNCTIONALITY  ======================= */
 .sidebar-toggle-button {
 	cursor: pointer;
@@ -44,7 +56,7 @@ div.workspace-split.is-sidedock-collapsed {
 
 div.workspace-split.mod-horizontal.mod-left-split {
 	max-width: 600px;
-	min-width: 200px;
+	min-width: 250px;
 }
 
 a.tree-item.nav-file {
@@ -54,8 +66,6 @@ a.tree-item.nav-file {
 div.nav-folder.is-collapsed > div.tree-item-children.nav-folder-children {
 	display: none;
 }
-
-
 
 .tab-button-container {
 	display: flex;

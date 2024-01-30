@@ -4,28 +4,31 @@ import { DEFAULT_SETTINGS, CollabSettings } from "./settings/settings";
 import { CollabSettingsTab } from "./settings/settingsTab";
 import { ServerController } from "./server/controller";
 import { setupUiButton } from "./objects/uiServerButton";
-import {ServerRunningModal} from "./objects/modals";
+import {ErrorOnAddressModal, ServerRunningModal} from "./objects/modals";
 
 export default class CollabPlugin extends Plugin {
     public settings!: CollabSettings;
     serverController?: ServerController;
-	private uiCleanupFns?: { clearRibbonButton: () => void, clearModal: () => void };
+	private uiCleanupFns?: { clearRibbonButton: () => void };
+	public serverModal?: ServerRunningModal;
 
 	ReloadUiElements() {
 		this.uiCleanupFns?.clearRibbonButton();
-		this.uiCleanupFns?.clearModal();
 		this.uiCleanupFns = setupUiButton(this);
 	}
 
     async onload() {
-        await this.loadSettings();
-        // const appStartup = document.querySelector('#collab')
-
+		if (!this.serverModal) {
+			this.serverModal = new ServerRunningModal(app, this);
+		}
+		await this.loadSettings();
+		// const appStartup = document.querySelector('#collab')
     }
 
 	async onunload() {
 		await this.stopServer();
 	}
+
 
     async loadSettings() {
         this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
@@ -68,6 +71,16 @@ export default class CollabPlugin extends Plugin {
 					this.stopServer();
 				},
 			});
+
+			const hostname = this.settings.hostname;
+			const port = this.settings.port;
+			// process.on('uncaughtException', function (err) {
+			// 	if (err.message.contains('EADDRNOTAVAIL')) {
+			// 		if (!document.querySelector('div.modal-container#errorModal')) {
+			// 			new ErrorOnAddressModal(app, hostname, port).open();
+			// 		}
+			// 	}
+			// });
 		});
     }
 
@@ -79,9 +92,7 @@ export default class CollabPlugin extends Plugin {
 	async startServer() {
 		await this.serverController?.start();
 		if (this.serverController?.isRunning()) {
-			this.app.workspace.trigger('collab-event', {
-				isServerRunning: true,
-			});
+			this.app.workspace.trigger('collab-event', {isServerRunning: true,});
 		}
 		return !!this.serverController?.isRunning();
 	}
@@ -92,12 +103,12 @@ export default class CollabPlugin extends Plugin {
 		return !this.serverController?.isRunning();
 	}
 
-	async setReccentFile(file: TFile) {
+	async setRecentFile(file: TFile) {
 		this.settings.recentFile = file;
 	}
 
 	handleSettings() {
-		console.log(document.scripts?.item(0)?.style);
+		// console.log(document.scripts?.item(0)?.style);
 		// Code to change the display of all data-path elements that are considered '.html' files
 		// const html_files = document.querySelectorAll('div[data-path$=".html"]');
 		// html_files.forEach((divElement) => {

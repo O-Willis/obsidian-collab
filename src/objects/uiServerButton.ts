@@ -1,32 +1,6 @@
 import {App, Notice, Setting} from 'obsidian';
-import {ConfirmModal, ServerRunningModal} from '../objects/modals'
+import {ConfirmModal, ServerRunningModal} from './modals'
 import CollabPlugin from "../main";
-
-const addModalState = (plugin: CollabPlugin) => {
-	const serverModal = new ServerRunningModal(plugin.app, plugin);
-
-	const changeModalState = ({isServerRunning,}: { isServerRunning: boolean; }) => {
-		if (isServerRunning) {
-			serverModal.open();
-		} else {
-			serverModal.confirmClose();
-		}
-	};
-	plugin.app.workspace.on('collab-event', changeModalState);
-
-	changeModalState({
-		isServerRunning: !!plugin.serverController?.isRunning(),
-	});
-
-	const clearModal = () => {
-		console.log('Closing modal');
-		serverModal.confirmClose();
-	}
-
-	plugin.register(clearModal);
-
-	return clearModal;
-}
 
 const addServerButton = (plugin: CollabPlugin) => {
 	if (!plugin.settings.useRibbonButtons) {
@@ -42,18 +16,18 @@ const addServerButton = (plugin: CollabPlugin) => {
 				console.log(activeLeaf);
 				const view = activeLeaf.view;
 
+
 				if (view.getViewType() === 'markdown') {
 					const markdownView = view as any; // Cast to 'any' to access the file property
 					const currentFile = markdownView.file;
 
 					plugin.settings.recentFile = currentFile;
-					console.log(`Most Reccent File: ${currentFile.path}`);
+					console.log(`Most Recent File: ${currentFile.path}`);
 					// If you want to do something more, like read the file's contents, you can use the Vault API
 					// const fileContents = await plugin.app.vault.read(currentFile);
 				}
 			}
-
-			new ConfirmModal(plugin.app, 'Are you sure you want to start the server?', async () => {
+			new ConfirmModal(plugin.app, 'Are you sure you want to start the server?', false,async () => {
 				const state = await plugin.startServer();
 				new Notice(
 					state ?
@@ -68,7 +42,7 @@ const addServerButton = (plugin: CollabPlugin) => {
 		'cloud',
 		'Turn the Http Server Off',
 		() => {
-			new ConfirmModal(plugin.app, 'Are you sure you want to stop the server?', async () => {
+			new ConfirmModal(plugin.app, `Are you sure you want to stop the server?<br>Any changes made on the browser will not be saved!`, true,async () => {
 				const state = await plugin.stopServer();
 				new Notice(
 					state ?
@@ -83,9 +57,11 @@ const addServerButton = (plugin: CollabPlugin) => {
 
 	const changeButtonState = ({isServerRunning,}: { isServerRunning: boolean; }) => {
 		if (isServerRunning) {
+			plugin.serverModal?.open();
 			startButton.hide();
 			stopButton.show();
 		} else {
+			plugin.serverModal?.close();
 			startButton.show();
 			stopButton.hide();
 		}
@@ -98,6 +74,7 @@ const addServerButton = (plugin: CollabPlugin) => {
 	});
 
 	const clearRibbonButton = () => {
+		plugin.serverModal?.close();
 		startButton.remove();
 		stopButton.remove();
 	}
@@ -109,6 +86,5 @@ const addServerButton = (plugin: CollabPlugin) => {
 
 export const setupUiButton = (plugin: CollabPlugin) => {
 	const clearRibbonButton = addServerButton(plugin);
-	const clearModal = addModalState(plugin);
-	return { clearRibbonButton, clearModal };
+	return { clearRibbonButton };
 }

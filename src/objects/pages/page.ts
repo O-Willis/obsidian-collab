@@ -1,7 +1,8 @@
 import CollabPlugin from "../../main";
-import {App, MarkdownRenderer, TFile, Workspace} from "obsidian";
+import {App, MarkdownRenderer, TAbstractFile, TFile, Workspace} from "obsidian";
 import {right} from "@popperjs/core";
 import {FileSorter, Navigation, NavigationOrder} from "./navigationResolver";
+import {CollabUser} from "../../server/controller";
 
 export class Page {
 	private head: PageHead;
@@ -72,7 +73,7 @@ export class Page {
 	}
 
 	retrieveHTML() {
-		return `<!DOCTYPE html><html lang="en">${this.head.retrieveHead()}${this.body.retrieveBodyHtml(this.plugin, false, this.createLeftNavBar(), this.source as TFile)}${this.scripts.retirevePageScripts(this.source)}`;
+		return `<!DOCTYPE html><html lang="en">${this.head.retrieveHead()}${this.body.retrieveBodyHtml(this.plugin, false, this.createLeftNavBar(), this.createPageHeader(), this.createTitleContainer(this.source as TFile))}${this.scripts.retirevePageScripts(this.source)}`;
 	}
 
 	private generateWebpageLayout(content: HTMLElement): {container: HTMLElement, left: HTMLElement, right: HTMLElement, center: HTMLElement} {
@@ -385,6 +386,78 @@ export class Page {
 		return Header;
 	}
 
+	private createPageHeader() {
+		if (!this.document) return this.contentElement;
+		const ToggleButtonSVG = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svg-icon sidebar-right"><path d="M3 3H21C22.1046 3 23 3.89543 23 5V19C23 20.1046 22.1046 21 21 21H3C1.89543 21 1 20.1046 1 19V5C1 3.89543 1.89543 3 3 3Z"></path><path d="M14 4V20"></path><path d="M20 7H17"></path><path d="M20 10H17"></path><path d="M20 13H17"></path></svg>`;
+
+		let HeaderContainer = this.document.createElement("div");
+		let HeaderSpacer = this.document.createElement("div");
+		let ActiveUsers = this.document.createElement("div");
+		let ToggleButton = this.document.createElement("div");
+		let ClickableIcon = this.document.createElement("div");
+
+		HeaderContainer.setAttribute("class", "workspace-tab-header-container");
+		HeaderContainer.setAttribute('style', 'padding-right: 10px');
+		HeaderSpacer.setAttribute("class", "workspace-tab-header-spacer");
+		ActiveUsers.setAttribute("class", "workspace-tab-header-tab-list workspace-user-list");
+
+		ToggleButton.setAttribute("class", "mod-right");
+		ToggleButton.ariaLabel = "";
+		ToggleButton.setAttribute('style', 'display: flex; justify-content: center; app-region: no-drag; cursor: pointer');
+		ToggleButton.setAttribute("data-tooltip-position", "left");
+		ClickableIcon.setAttribute("class", "clickable-icon");
+
+		HeaderContainer.appendChild(HeaderSpacer);
+		HeaderContainer.appendChild(ActiveUsers);
+		ActiveUsers.style.gap = '3px';
+
+		HeaderContainer.appendChild(ToggleButton);
+		ToggleButton.appendChild(ClickableIcon);
+		ClickableIcon.innerHTML = ToggleButtonSVG;
+		return HeaderContainer;
+	}
+
+	private createTitleContainer(file: TFile) {
+		/*
+		- div view-header-title-container mod-at-start mod-fade
+
+			- div view-header-title-parent
+				- div `view-header-breadcrumb
+				- div `view-header-breadcrumb
+
+			- div view-header-title							tabindex="-1" contenteditable="true" value = file.name
+		*/
+		if (!this.document) return this.contentElement;
+		const TitleContainer = document.createElement('div');
+		const TitleParent = document.createElement('div');
+		const Title = document.createElement('div');
+
+		TitleContainer.setAttribute('class', `view-header-title-container mod-at-start mod-fade`);
+		TitleParent.setAttribute('class', `view-header-title-parent`);
+		Title.setAttribute('class', `view-header-title`);
+
+		TitleContainer.appendChild(TitleParent);
+		let curParent = file.parent;
+		while (curParent) {
+			if (curParent.name != '') {
+				const HeaderBreadCrumb = document.createElement('div');
+				const HeaderBreadCrumbSeparator = document.createElement('div');
+				HeaderBreadCrumb.setAttribute('class', `view-header-breadcrumb`);
+				HeaderBreadCrumb.innerText = curParent.name;
+				HeaderBreadCrumbSeparator.setAttribute('class', `view-header-breadcrumb-separator`);
+				HeaderBreadCrumbSeparator.innerText = '/';
+				TitleParent.appendChild(HeaderBreadCrumb);
+				TitleParent.appendChild(HeaderBreadCrumbSeparator);
+			}
+			curParent = curParent.parent;
+		}
+		TitleContainer.appendChild(Title);
+		Title.tabIndex = -1;
+		Title.contentEditable = `true`;
+		Title.innerText = file.basename;
+
+		return TitleContainer;
+	}
 }
 
 export class PageHead {
@@ -405,6 +478,7 @@ export class PageHead {
 	<title>${this.title}</title>
 	<link rel="shortcut icon" href="${this.favicon}">
 	<link href="${this.css}" type="text/css" rel="stylesheet">
+	<script src="https://cdn.socket.io/4.7.4/socket.io.min.js" integrity="sha384-Gr6Lu2Ajx28mzwyVR8CFkULdCU7kMlZ9UthllibdOSo6qAiN+yXNHqtgdTvFXMT4" crossorigin="anonymous"></script>
 </head>`;
 	}
 }
@@ -425,9 +499,13 @@ export class PageBody {
 		this.modRightSplit = ``;
 	}
 
-	retrieveBodyHtml(plugin: CollabPlugin, useTitlebar: boolean, leftSideDock: HTMLDivElement, file: TFile) {
+	retrieveBodyHtml(plugin: CollabPlugin, useTitlebar: boolean, leftSideDock: HTMLDivElement, pageHeader: HTMLDivElement, titleContainer: HTMLDivElement) {
 		var tempDivElement = document.createElement('div');
+		var tempPageHeader = document.createElement('div');
+		var tempTitleContainer = document.createElement('div');
 		tempDivElement.appendChild(leftSideDock);
+		tempPageHeader.appendChild(pageHeader);
+		tempTitleContainer.appendChild(titleContainer)
 		let theme = `${document.body.classList.contains('theme-dark')? 'theme-dark' : 'theme-light'}`;
 		let classString = `mod-windows is-frameless is-maximized is-hidden-frameless obsidian-app show-inline-title show-view-header`;
 		return `<body class="${theme} ${classString}" style="--zoom-factor:1; --font-text-size:16px;">
@@ -435,7 +513,7 @@ export class PageBody {
 	<div class="app-container">
 		<div class="horizontal-main-container">
 			<div class="workspace">
-				<div class="workspace-ribbon side-dock-ribbon mod-left is-collapsed">
+				<div class="workspace-ribbon side-dock-ribbon mod-left">
 					${this.workspaceRibbon?.innerHTML}
 				</div>
 				${tempDivElement.innerHTML}
@@ -443,15 +521,12 @@ export class PageBody {
 					<hr class="workspace-leaf-resize-handle">
 					<div class="workspace-tabs mod-top mod-top-left-space mod-top-right-space">
 						<hr class="workspace-leaf-resize-handle">
-						${this.hardCodedHeader()}
+						${tempPageHeader.innerHTML}
 						<div class="workspace-tab-container">
 							<div class="workspace-leaf">
 								<div class="workspace-leaf-content" data-type="markdown" data-mode="preview">
 									<div class="view-header">
-										<div class="view-header-title-container mod-at-start mod-fade">
-											<div class="view-header-title-parent"></div>
-											<div class="view-header-title" tabindex="-1" contenteditable="true">${file.name}</div>
-										</div>
+										${tempTitleContainer.innerHTML}
 										<div class="view-actions">
 											<a class="clickable-icon view-action mod-bookmark" aria-label="Bookmark">
 												<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svg-icon lucide-bookmark">
@@ -491,7 +566,7 @@ export class PageBody {
 										</div>
 										<div class="markdown-reading-view" style="width: 100%; height: 100%;">
 											<div class="markdown-preview-view markdown-rendered node-insert-event is-readable-line-width allow-fold-headings show-indentation-guide allow-fold-lists" tabindex="-1" style="tab-size: 4; height: 100% !important;">
-												<div class="markdown-preview-sizer markdown-preview-section" style="min-height: calc(100% - var(--file-margins) - var(--file-margins));">
+												<div class="markdown-preview-sizer markdown-preview-section" style="min-height: calc(100% - var(--file-margins));">
 													<div class="markdown-preview-pusher" style="width: 1px; height: 0.1px; margin-bottom: 0px;"></div>
 													<div class="mod-header"></div>
 													${this.markdown}
@@ -568,24 +643,6 @@ export class PageBody {
 	</div>
 </div>`;
 	}
-
-	hardCodedHeader() {
-		return `
-<div class="workspace-tab-header-container" style="padding-right: 10px">
-	<div class="workspace-tab-header-spacer"></div>
-	<div class="sidebar-toggle-button mod-right" aria-label="" data-tooltip-position="left">
-		<div class="clickable-icon">
-			<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svg-icon sidebar-right">
-				<path d="M3 3H21C22.1046 3 23 3.89543 23 5V19C23 20.1046 22.1046 21 21 21H3C1.89543 21 1 20.1046 1 19V5C1 3.89543 1.89543 3 3 3Z"></path>
-				<path d="M14 4V20"></path>
-				<path d="M20 7H17"></path>
-				<path d="M20 10H17"></path>
-				<path d="M20 13H17"></path>
-			</svg>
-		</div>
-	</div>
-</div>`;
-	}
 }
 
 export class PageScriptElement {
@@ -595,6 +652,10 @@ export class PageScriptElement {
 		// console.log(workspace.leftRibbon);
 		this.scripts = '';
 	}
+
+	// TODO Note to self
+	// I'm thinking on the join event, I can just send the innerHTML contents of the header-tab-list, edit it and then send it back
+	// 	and reassign the innerHTML to whatever change happened
 
 	retirevePageScripts(file: TFile | null) {
 		return `
@@ -606,25 +667,28 @@ export class PageScriptElement {
 	const source_view = document.querySelector("div.markdown-source-view");
 	const reading_view = document.querySelector("div.markdown-reading-view");
 	let updatedText = document.querySelector("div.cm-content");
-    const split = 'ws://${this.plugin.settings.hostname.replace('http', 'ws')}'+':${this.plugin.settings.port}';
-    console.log("split: ",split);
-    const socket = new WebSocket(split);
-    socket.addEventListener('open', (event) => {
-        console.log("WebSocket message received ", event);
-        updatedText = document.querySelector("div.cm-content").innerText;
-    	const data = {
-            event: 'open',
-        	url: '${file?.path}',
-       		text: updatedText
-    	};
-    	socket.send(JSON.stringify(data));
-    });
+    const pagePath = getFilePath();
+    const socketIO = io();
+    socketIO.emit('join', pagePath);
     
-     socket.onmessage = (event) => {
-         console.log('Socket onmessage event!');
-         updatedText.innerText = event.data;
-         console.log(event.data);
-     };
+    function getFilePath() {
+        const currentUrl = window.location.href;
+		console.log(currentUrl);
+        let pagePath = '';
+        const pageParents = document.querySelector("div.view-header-title-container");
+        const pageTitle = document.querySelector("div.view-header-title-container div.view-header-title");
+        const breadcrumbs = pageParents.getElementsByClassName('view-header-breadcrumb');
+        for (let i = 0; i < breadcrumbs.length; i++) {
+            if (breadcrumbs[i].innerText === '') {continue;}
+            pagePath += breadcrumbs[i].innerText;
+            if (i < breadcrumbs.length) {
+            	pagePath += '/';
+            }
+        }
+        pagePath += pageTitle.innerText+'.md';
+        console.log(pagePath);
+        return pagePath;
+    }
     
 	function changeEditorMode() {
         let is_invisible = source_view.getAttribute('style');
@@ -634,7 +698,7 @@ export class PageScriptElement {
             switch_button.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svg-icon lucide-book-open"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>';
         	source_view.setAttribute('style', 'width: 100%; height: 100%;');
         	reading_view.setAttribute('style', 'display: none;');
-            const parsed = JSON.stringify({event: 'edit', url: '${file?.path}', text: updatedText});
+            const parsed = JSON.stringify({ type: 'update', url: '${file?.path}', text: updatedText});
         } else {
             switch_button.title = 'reading';
             switch_button.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svg-icon lucide-edit-3"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>';
@@ -645,16 +709,16 @@ export class PageScriptElement {
     
     function saveText() {
     	updatedText = document.querySelector("div.cm-content").innerText;
-    	const data = {
-            event: switch_button.title,
-        	url: '${file?.path}',
-       		text: updatedText
-    	};
-    	socket.send(JSON.stringify(data));
+    	// const data = {
+        //     type: 'update',
+        // 	url: '${file?.path}',
+       	// 	text: updatedText
+    	// };
+        // console.log(data);
+    	// socket.send(JSON.stringify(data));
 	}
 	
 	document.addEventListener("DOMContentLoaded", function () {
-        
         toggleButton.addEventListener('click', function () {
             let startNavWidth = 250;
             document.querySelector('div.workspace')?.classList.toggle('is-left-sidedock-open');
@@ -669,10 +733,9 @@ export class PageScriptElement {
             navFolderElement.classList.toggle('is-collapsed');
             navFolderElement.querySelector('div.tree-item-icon')?.classList.toggle('is-collapsed');
         });
-        
+		
         const draggableHr = document.getElementsByClassName("workspace-leaf-resize-handle").item(0);
 		let isResizing = false;
-		
 		draggableHr.addEventListener("mousedown", function (event) {
             isResizing = true;
             document.addEventListener("mousemove", handleMouseMove);
@@ -690,13 +753,91 @@ export class PageScriptElement {
         		draggableHr.parentElement.style.width = newWidth + "px";
             }
         }
+		
+		socketIO.on('updatedUserList', (curUser, newPage, fileSubscriptions) => {
+			console.log('---- UPDATEDUSERLIST ----');
+            console.log(fileSubscriptions);
+            console.log(fileSubscriptions[pagePath]);
+            updateActiveUsersOnPageUI(fileSubscriptions[pagePath]);
+            updateNavigationUsersUI(fileSubscriptions);
+		});
+        
+        const activeUsersContainer = document.getElementsByClassName("workspace-user-list").item(0);
+		function updateActiveUsersOnPageUI(users) {
+			activeUsersContainer.innerHTML = ''; // Clear the previous content
+			
+			const maxDisplayUsers = 4;
+		   	
+			for (let i = 0; i < Math.min(users.length, maxDisplayUsers); i++) {
+				const userCircle = createUserCircle(users[i], false);
+				activeUsersContainer.appendChild(userCircle);
+			}
+		   	
+			if (users.length > maxDisplayUsers) {
+				const moreCircle = createMoreCircle(users.length - maxDisplayUsers);
+				activeUsersContainer.appendChild(moreCircle);
+			}
+			console.log(activeUsersContainer);
+		}
+        
+        function updateNavigationUsersUI(fileSubscriptions) {
+            document.querySelectorAll('div.nav-file-users[data-path$=".md"]').forEach((file) => file.innerHTML = '');
+            for (const filePath in fileSubscriptions) {
+                console.log("key: "+filePath);
+                console.log(fileSubscriptions[filePath]);
+                const navFile = document.querySelector('div.nav-file-users[data-path="'+filePath+'"]');
+                console.log(navFile);
+                navFile.innerHTML = '';
+                console.log("Looping over users");
+                for (let i = 0; i < fileSubscriptions[filePath].length; i++) {
+                    const user = fileSubscriptions[filePath][i];
+                    const userCircle = createUserCircle(user, true);
+                    navFile.appendChild(userCircle);
+                    console.log(user);
+                }
+			}
+        }
+	   
+		function createUserCircle(user, isFileNav) {
+			const userItemContainer = document.createElement('div');
+			const userCircle = document.createElement('div');
+			const userSVG = '<svg width="25px" height="25px" viewBox="0 0 24.00 24.00" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="var(--interactive-accent)" stroke-width="0.00024000000000000003"><g id="SVGRepo_bgCarrier" stroke-width="0" transform="translate(2.040000000000001,2.040000000000001), scale(0.83)"><rect x="0" y="0" width="24.00" height="24.00" rx="12" fill="#ffffff" strokewidth="0"></rect></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round" stroke="#CCCCCC" stroke-width="0.43200000000000005"></g><g id="SVGRepo_iconCarrier"> <path opacity="0.5" d="M22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12Z" fill="var(--interactive-accent)"></path> <path d="M16.807 19.0112C15.4398 19.9504 13.7841 20.5 12 20.5C10.2159 20.5 8.56023 19.9503 7.193 19.0111C6.58915 18.5963 6.33109 17.8062 6.68219 17.1632C7.41001 15.8302 8.90973 15 12 15C15.0903 15 16.59 15.8303 17.3178 17.1632C17.6689 17.8062 17.4108 18.5964 16.807 19.0112Z" fill="var(--interactive-accent)"></path> <path d="M12 12C13.6569 12 15 10.6569 15 9C15 7.34315 13.6569 6 12 6C10.3432 6 9.00004 7.34315 9.00004 9C9.00004 10.6569 10.3432 12 12 12Z" fill="var(--interactive-accent)"></path> </g></svg>';
+		    
+			userCircle.setAttribute('class', 'user-circle');
+			userCircle.style.position = 'relative';
+			userCircle.style.display = 'inline flex';
+			userCircle.style.borderRadius = '50%';
+			userCircle.style.border = '2px solid';
+		    
+			userItemContainer.title = user.username;
+            console.log('=========');
+            console.log(user);
+            console.log(userItemContainer.title);
+            userItemContainer.style.display = 'flex';
+            userItemContainer.style.cursor = 'pointer';
+            if (!isFileNav) {
+            	userItemContainer.style.justifyContent = 'center';
+            }
+			userItemContainer.appendChild(userCircle);
+		   	
+			userCircle.innerHTML = userSVG;
+			userCircle.style.color = user.userColor;
+		   	
+			return userItemContainer;
+		}
+        
+	   	function createMoreCircle(count) {
+		   	const moreCircle = document.createElement('div');
+			moreCircle.className = 'moreCircle';
+			moreCircle.textContent = '+'+count.toString();
+			moreCircle.title = 'Click to view more users';
+			moreCircle.addEventListener('click', () => {
+				// Implement logic to show a modal or expand the user list
+				alert('List of all users: '+socketIO.rooms[pagePath]);
+			});
+			return moreCircle;
+	   	}
     });
-    
-    
 </script>`;
 	}
 }
-//
-// export class PageItem {
-//
-// }
