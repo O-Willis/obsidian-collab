@@ -7,7 +7,7 @@ Content
 - **html**
 	- [[Index]]
 - **html_templates**
-	- [[html_templates/main_scripts.html]]
+	- [[main_scripts.html]]
 	- [[html_templates/scripts.html]]
 	- [[html_templates/titlebar.html]]
 	- [[html_templates/titlebar_1.html]]

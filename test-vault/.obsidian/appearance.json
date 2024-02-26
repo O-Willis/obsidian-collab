@@ -6,10 +6,11 @@
   "nativeMenus": false,
   "translucency": false,
   "enabledCssSnippets": [
-    "mermaid",
+    "animations",
     "background",
     "obsidian_app",
-    "animations"
+    "mermaid"
   ],
-  "baseFontSize": 10
+  "baseFontSize": 15,
+  "textFontFamily": ""
 }

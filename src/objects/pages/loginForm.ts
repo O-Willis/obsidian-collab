@@ -48,7 +48,10 @@ export class LoginForm {
                                   <input placeholder="Username" id="username" type="text" name="username" spellcheck="false">
                                 </div>
                                 <br>
-                                <div class="html-login-form-label"><label for="password">Password:</label></div><div class="setting-item-control"><input placeholder="Password" id="password" type="password" name="password" spellcheck="false"></div>
+                                <div class="html-login-form-label"><label for="password">Password:</label></div>
+                                <div class="setting-item-control">
+                                	<input placeholder="Password" id="password" type="password" name="password" spellcheck="false">
+                                </div>
                                 <input style="display: none;" id="redirectUrl" type="text" name="redirectUrl" spellcheck="false">
                                 <br>
                                 <span class="settings-error-element" hidden id="error"></span>
@@ -143,7 +146,7 @@ export class LoginForm {
                               <div class="html-login-form">
                                 <div class="html-login-form-label"><label for="username">Username:</label></div>
                                 <div class="setting-item-control">
-                                  <input placeholder="Username" id="username" type="text" name="username" spellcheck="false">
+                                  <input placeholder="Username" id="username" type="text" name="username" spellcheck="false" autocomplete="off">
                                 </div>
                                 <input style="display: none;" id="redirectUrl" type="text" name="redirectUrl" spellcheck="false">
                                 <br>

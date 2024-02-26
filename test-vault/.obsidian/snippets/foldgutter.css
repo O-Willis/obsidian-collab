@@ -1,0 +1,32 @@
+
+div.CodeMirror-sizer {
+    padding-top: --var(file-margins);
+    margin-left: --var(file-margins);
+}
+
+/* ================ ACTUAL GUTTER STUFF ================*/
+/* Remvoes the gutter bar to expose only the arrows*/
+div.CodeMirror-scroll > div.CodeMirror-gutters {
+    background-color: transparent;
+    border-right: 0px solid;
+    color: white;
+}
+/* 
+div.CodeMirror-foldgutter-open:before {
+    content: "\200B";
+} */
+
+.CodeMirror-foldgutter-open:after {
+    content: "\200B";
+    /* -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    mask-image: url(data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLWNoZXZyb24tZG93biI+PHBhdGggZD0ibTYgOSA2IDYgNi02Ii8+PC9zdmc+);
+    -webkit-mask-image: url(data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLWNoZXZyb24tZG93biI+PHBhdGggZD0ibTYgOSA2IDYgNi02Ii8+PC9zdmc+); */
+    color: white;
+}
+
+.theme-dark {
+    div.CodeMirror-cursor {
+        color: white;
+    }
+}

@@ -2410,7 +2410,7 @@ class CollabSettingsTab extends obsidian.PluginSettingTab {
                 await this.saveAndReload();
             });
         });
-        this.display_favicon(containerEl);
+        this.addFaviconSettings(containerEl);
         const portSetting = new obsidian.Setting(containerEl)
             .setName('Listening port.')
             .setTooltip('Default: 8080')
@@ -2518,26 +2518,68 @@ class CollabSettingsTab extends obsidian.PluginSettingTab {
         options_hr.style.borderColor = "var(--color-accent)";
         options_hr.style.opacity = "0.5";
     }
-    display_favicon(containerEl) {
+    addFaviconSettings(containerEl) {
         const faviconDisplay = new DocumentFragment();
         const faviconDesc = faviconDisplay.createDiv();
-        faviconDesc.setText(`Favicon Preview:`);
+        faviconDesc.setText(`Set a custom favicon for the server.`);
         faviconDesc.style.marginBottom = '10px';
         const favicon = faviconDisplay.createEl('img', { attr: { ['height']: `60`, ['width']: '60', ['src']: `${this.plugin.settings.faviconLink}` } });
         favicon.style.marginLeft = '10px';
         faviconDisplay.appendChild(favicon);
-        new obsidian.Setting(containerEl)
+        const faviconSetting = new obsidian.Setting(containerEl)
             .setName('Server Favicon')
             .setTooltip(`Default 'http://obsidian.md/favicon.ico'`)
-            .setDesc(faviconDisplay)
-            .addButton((cb) => {
-            cb.setIcon('lucide-rotate-ccw');
-            cb.setTooltip('Restore to Default Favicon');
-            cb.onClick(async () => {
-                this.plugin.settings.faviconLink = DEFAULT_SETTINGS.faviconLink;
-                await this.saveAndReload();
+            .setDesc(faviconDisplay);
+        faviconSetting.addButton((cb) => {
+            const input = createEl("input", {
+                attr: {
+                    type: "file",
+                    name: "image",
+                    accept: '.png, .ico, .jpeg, .svg',
+                    multiple: false,
+                    style: 'display: none;'
+                }
             });
+            input.onchange = async (value) => {
+                console.log(value);
+                const { files } = input;
+                if (!files || files.length)
+                    return;
+                files[0];
+                const reader = new FileReader();
+                reader.onloadend = async (evt) => {
+                    const image = new Image();
+                    console.log(image);
+                    image.onload = async () => {
+                        try {
+                            image.src = evt.target?.result?.toString() || '';
+                            this.plugin.settings.faviconLink = image.src;
+                            console.log(image.src);
+                            await this.saveAndReload();
+                        }
+                        catch (e) {
+                            new obsidian.Notice("There was an error parsing the image.");
+                            console.log(e);
+                        }
+                    };
+                };
+                const tempVal = value;
+                reader.readAsDataURL(tempVal);
+            };
+            cb.setButtonText('Choose');
+            cb.buttonEl.appendChild(input);
+            cb.onClick(() => input.click());
         });
+        if (this.plugin.settings.faviconLink != DEFAULT_SETTINGS.faviconLink) {
+            faviconSetting.addButton((cb) => {
+                cb.setIcon('lucide-rotate-ccw');
+                cb.setTooltip('Restore to Default Favicon');
+                cb.onClick(async () => {
+                    this.plugin.settings.faviconLink = DEFAULT_SETTINGS.faviconLink;
+                    await this.saveAndReload();
+                });
+            });
+        }
     }
     add_host_settings(containerEl) {
         const hostNameDesc = new DocumentFragment();
@@ -29354,6 +29396,90 @@ function requireText () {
 	return text_1;
 }
 
+var esErrors;
+var hasRequiredEsErrors;
+
+function requireEsErrors () {
+	if (hasRequiredEsErrors) return esErrors;
+	hasRequiredEsErrors = 1;
+
+	/** @type {import('.')} */
+	esErrors = Error;
+	return esErrors;
+}
+
+var _eval;
+var hasRequired_eval;
+
+function require_eval () {
+	if (hasRequired_eval) return _eval;
+	hasRequired_eval = 1;
+
+	/** @type {import('./eval')} */
+	_eval = EvalError;
+	return _eval;
+}
+
+var range;
+var hasRequiredRange;
+
+function requireRange () {
+	if (hasRequiredRange) return range;
+	hasRequiredRange = 1;
+
+	/** @type {import('./range')} */
+	range = RangeError;
+	return range;
+}
+
+var ref;
+var hasRequiredRef;
+
+function requireRef () {
+	if (hasRequiredRef) return ref;
+	hasRequiredRef = 1;
+
+	/** @type {import('./ref')} */
+	ref = ReferenceError;
+	return ref;
+}
+
+var syntax;
+var hasRequiredSyntax;
+
+function requireSyntax () {
+	if (hasRequiredSyntax) return syntax;
+	hasRequiredSyntax = 1;
+
+	/** @type {import('./syntax')} */
+	syntax = SyntaxError;
+	return syntax;
+}
+
+var type$1;
+var hasRequiredType;
+
+function requireType () {
+	if (hasRequiredType) return type$1;
+	hasRequiredType = 1;
+
+	/** @type {import('./type')} */
+	type$1 = TypeError;
+	return type$1;
+}
+
+var uri;
+var hasRequiredUri;
+
+function requireUri () {
+	if (hasRequiredUri) return uri;
+	hasRequiredUri = 1;
+
+	/** @type {import('./uri')} */
+	uri = URIError;
+	return uri;
+}
+
 var shams;
 var hasRequiredShams;
 
@@ -29574,9 +29700,15 @@ function requireGetIntrinsic () {
 
 	var undefined$1;
 
-	var $SyntaxError = SyntaxError;
+	var $Error = requireEsErrors();
+	var $EvalError = require_eval();
+	var $RangeError = requireRange();
+	var $ReferenceError = requireRef();
+	var $SyntaxError = requireSyntax();
+	var $TypeError = requireType();
+	var $URIError = requireUri();
+
 	var $Function = Function;
-	var $TypeError = TypeError;
 
 	// eslint-disable-next-line consistent-return
 	var getEvalledConstructor = function (expressionSyntax) {
@@ -29628,6 +29760,7 @@ function requireGetIntrinsic () {
 	var TypedArray = typeof Uint8Array === 'undefined' || !getProto ? undefined$1 : getProto(Uint8Array);
 
 	var INTRINSICS = {
+		__proto__: null,
 		'%AggregateError%': typeof AggregateError === 'undefined' ? undefined$1 : AggregateError,
 		'%Array%': Array,
 		'%ArrayBuffer%': typeof ArrayBuffer === 'undefined' ? undefined$1 : ArrayBuffer,
@@ -29648,9 +29781,9 @@ function requireGetIntrinsic () {
 		'%decodeURIComponent%': decodeURIComponent,
 		'%encodeURI%': encodeURI,
 		'%encodeURIComponent%': encodeURIComponent,
-		'%Error%': Error,
+		'%Error%': $Error,
 		'%eval%': eval, // eslint-disable-line no-eval
-		'%EvalError%': EvalError,
+		'%EvalError%': $EvalError,
 		'%Float32Array%': typeof Float32Array === 'undefined' ? undefined$1 : Float32Array,
 		'%Float64Array%': typeof Float64Array === 'undefined' ? undefined$1 : Float64Array,
 		'%FinalizationRegistry%': typeof FinalizationRegistry === 'undefined' ? undefined$1 : FinalizationRegistry,
@@ -29672,8 +29805,8 @@ function requireGetIntrinsic () {
 		'%parseInt%': parseInt,
 		'%Promise%': typeof Promise === 'undefined' ? undefined$1 : Promise,
 		'%Proxy%': typeof Proxy === 'undefined' ? undefined$1 : Proxy,
-		'%RangeError%': RangeError,
-		'%ReferenceError%': ReferenceError,
+		'%RangeError%': $RangeError,
+		'%ReferenceError%': $ReferenceError,
 		'%Reflect%': typeof Reflect === 'undefined' ? undefined$1 : Reflect,
 		'%RegExp%': RegExp,
 		'%Set%': typeof Set === 'undefined' ? undefined$1 : Set,
@@ -29690,7 +29823,7 @@ function requireGetIntrinsic () {
 		'%Uint8ClampedArray%': typeof Uint8ClampedArray === 'undefined' ? undefined$1 : Uint8ClampedArray,
 		'%Uint16Array%': typeof Uint16Array === 'undefined' ? undefined$1 : Uint16Array,
 		'%Uint32Array%': typeof Uint32Array === 'undefined' ? undefined$1 : Uint32Array,
-		'%URIError%': URIError,
+		'%URIError%': $URIError,
 		'%WeakMap%': typeof WeakMap === 'undefined' ? undefined$1 : WeakMap,
 		'%WeakRef%': typeof WeakRef === 'undefined' ? undefined$1 : WeakRef,
 		'%WeakSet%': typeof WeakSet === 'undefined' ? undefined$1 : WeakSet
@@ -29732,6 +29865,7 @@ function requireGetIntrinsic () {
 	};
 
 	var LEGACY_ALIASES = {
+		__proto__: null,
 		'%ArrayBufferPrototype%': ['ArrayBuffer', 'prototype'],
 		'%ArrayPrototype%': ['Array', 'prototype'],
 		'%ArrayProto_entries%': ['Array', 'prototype', 'entries'],
@@ -30012,8 +30146,8 @@ function requireDefineDataProperty () {
 		}
 	}
 
-	var $SyntaxError = GetIntrinsic('%SyntaxError%');
-	var $TypeError = GetIntrinsic('%TypeError%');
+	var $SyntaxError = requireSyntax();
+	var $TypeError = requireType();
 
 	var gopd = requireGopd();
 
@@ -30079,7 +30213,7 @@ function requireSetFunctionLength () {
 	var hasDescriptors = requireHasPropertyDescriptors()();
 	var gOPD = requireGopd();
 
-	var $TypeError = GetIntrinsic('%TypeError%');
+	var $TypeError = requireType();
 	var $floor = GetIntrinsic('%Math.floor%');
 
 	/** @typedef {(...args: unknown[]) => unknown} Func */
@@ -30130,7 +30264,7 @@ function requireCallBind () {
 		var GetIntrinsic = requireGetIntrinsic();
 		var setFunctionLength = requireSetFunctionLength();
 
-		var $TypeError = GetIntrinsic('%TypeError%');
+		var $TypeError = requireType();
 		var $apply = GetIntrinsic('%Function.prototype.apply%');
 		var $call = GetIntrinsic('%Function.prototype.call%');
 		var $reflectApply = GetIntrinsic('%Reflect.apply%', true) || bind.call($call, $apply);
@@ -30749,7 +30883,7 @@ function requireSideChannel () {
 	var callBound = requireCallBound();
 	var inspect = requireObjectInspect();
 
-	var $TypeError = GetIntrinsic('%TypeError%');
+	var $TypeError = requireType();
 	var $WeakMap = GetIntrinsic('%WeakMap%', true);
 	var $Map = GetIntrinsic('%Map%', true);
 
@@ -30761,13 +30895,10 @@ function requireSideChannel () {
 	var $mapHas = callBound('Map.prototype.has', true);
 
 	/*
-	 * This function traverses the list returning the node corresponding to the
-	 * given key.
-	 *
-	 * That node is also moved to the head of the list, so that if it's accessed
-	 * again we don't need to traverse the whole list. By doing so, all the recently
-	 * used nodes can be accessed relatively quickly.
-	 */
+	* This function traverses the list returning the node corresponding to the given key.
+	*
+	* That node is also moved to the head of the list, so that if it's accessed again we don't need to traverse the whole list. By doing so, all the recently used nodes can be accessed relatively quickly.
+	*/
 	var listGetNode = function (list, key) { // eslint-disable-line consistent-return
 		for (var prev = list, curr; (curr = prev.next) !== null; prev = curr) {
 			if (curr.key === key) {
@@ -30854,11 +30985,7 @@ function requireSideChannel () {
 					$mapSet($m, key, value);
 				} else {
 					if (!$o) {
-						/*
-						 * Initialize the linked list as an empty node, so that we don't have
-						 * to special-case handling of the first node: we can always refer to
-						 * it as (previous node).next, instead of something like (list).head
-						 */
+						// Initialize the linked list as an empty node, so that we don't have to special-case handling of the first node: we can always refer to it as (previous node).next, instead of something like (list).head
 						$o = { key: {}, next: null };
 					}
 					listSet($o, key, value);
@@ -45989,7 +46116,7 @@ function defineGetter(obj, name, getter) {
   });
 }
 
-var cookieSignature = {};
+var cookieSignature$1 = {};
 
 /**
  * Module dependencies.
@@ -46043,7 +46170,7 @@ var cookieSignature = {};
 	function sha1(str){
 	  return crypto.createHash('sha1').update(str).digest('hex');
 	} 
-} (cookieSignature));
+} (cookieSignature$1));
 
 var cookie$5 = {};
 
@@ -46067,7 +46194,7 @@ cookie$5.serialize = serialize$2;
  * @private
  */
 
-var __toString = Object.prototype.toString;
+var __toString$1 = Object.prototype.toString;
 
 /**
  * RegExp to match field-content in RFC 7230 sec 3.2
@@ -46204,7 +46331,7 @@ function serialize$2(name, val, options) {
   if (opt.expires) {
     var expires = opt.expires;
 
-    if (!isDate(expires) || isNaN(expires.valueOf())) {
+    if (!isDate$1(expires) || isNaN(expires.valueOf())) {
       throw new TypeError('option expires is invalid');
     }
 
@@ -46295,8 +46422,8 @@ function encode$3 (val) {
  * @private
  */
 
-function isDate (val) {
-  return __toString.call(val) === '[object Date]' ||
+function isDate$1 (val) {
+  return __toString$1.call(val) === '[object Date]' ||
     val instanceof Date
 }
 
@@ -46492,7 +46619,7 @@ var onFinished = onFinishedExports;
 var path = require$$0$6;
 var statuses = statuses$3;
 var merge$1 = utilsMergeExports;
-var sign = cookieSignature.sign;
+var sign = cookieSignature$1.sign;
 var normalizeType = utils$1.normalizeType;
 var normalizeTypes = utils$1.normalizeTypes;
 var setCharset = utils$1.setCharset;
@@ -48011,8 +48138,7 @@ cookie$3.serialize = serialize$1;
  * @private
  */
 
-var decode$2 = decodeURIComponent;
-var encode$2 = encodeURIComponent;
+var __toString = Object.prototype.toString;
 
 /**
  * RegExp to match field-content in RFC 7230 sec 3.2
@@ -48043,31 +48169,42 @@ function parse$7(str, options) {
 
   var obj = {};
   var opt = options || {};
-  var pairs = str.split(';');
   var dec = opt.decode || decode$2;
 
-  for (var i = 0; i < pairs.length; i++) {
-    var pair = pairs[i];
-    var index = pair.indexOf('=');
+  var index = 0;
+  while (index < str.length) {
+    var eqIdx = str.indexOf('=', index);
 
-    // skip things that don't look like key=value
-    if (index < 0) {
-      continue;
+    // no more cookie pairs
+    if (eqIdx === -1) {
+      break
     }
 
-    var key = pair.substring(0, index).trim();
+    var endIdx = str.indexOf(';', index);
+
+    if (endIdx === -1) {
+      endIdx = str.length;
+    } else if (endIdx < eqIdx) {
+      // backtrack on prior semicolon
+      index = str.lastIndexOf(';', eqIdx - 1) + 1;
+      continue
+    }
+
+    var key = str.slice(index, eqIdx).trim();
 
     // only assign once
-    if (undefined == obj[key]) {
-      var val = pair.substring(index + 1, pair.length).trim();
+    if (undefined === obj[key]) {
+      var val = str.slice(eqIdx + 1, endIdx).trim();
 
       // quoted values
-      if (val[0] === '"') {
+      if (val.charCodeAt(0) === 0x22) {
         val = val.slice(1, -1);
       }
 
       obj[key] = tryDecode$1(val, dec);
     }
+
+    index = endIdx + 1;
   }
 
   return obj;
@@ -48136,11 +48273,13 @@ function serialize$1(name, val, options) {
   }
 
   if (opt.expires) {
-    if (typeof opt.expires.toUTCString !== 'function') {
+    var expires = opt.expires;
+
+    if (!isDate(expires) || isNaN(expires.valueOf())) {
       throw new TypeError('option expires is invalid');
     }
 
-    str += '; Expires=' + opt.expires.toUTCString();
+    str += '; Expires=' + expires.toUTCString();
   }
 
   if (opt.httpOnly) {
@@ -48149,6 +48288,30 @@ function serialize$1(name, val, options) {
 
   if (opt.secure) {
     str += '; Secure';
+  }
+
+  if (opt.partitioned) {
+    str += '; Partitioned';
+  }
+
+  if (opt.priority) {
+    var priority = typeof opt.priority === 'string'
+      ? opt.priority.toLowerCase()
+      : opt.priority;
+
+    switch (priority) {
+      case 'low':
+        str += '; Priority=Low';
+        break
+      case 'medium':
+        str += '; Priority=Medium';
+        break
+      case 'high':
+        str += '; Priority=High';
+        break
+      default:
+        throw new TypeError('option priority is invalid')
+    }
   }
 
   if (opt.sameSite) {
@@ -48174,6 +48337,42 @@ function serialize$1(name, val, options) {
   }
 
   return str;
+}
+
+/**
+ * URL-decode string value. Optimized to skip native call when no %.
+ *
+ * @param {string} str
+ * @returns {string}
+ */
+
+function decode$2 (str) {
+  return str.indexOf('%') !== -1
+    ? decodeURIComponent(str)
+    : str
+}
+
+/**
+ * URL-encode value.
+ *
+ * @param {string} val
+ * @returns {string}
+ */
+
+function encode$2 (val) {
+  return encodeURIComponent(val)
+}
+
+/**
+ * Determine if value is a Date.
+ *
+ * @param {*} val
+ * @private
+ */
+
+function isDate (val) {
+  return __toString.call(val) === '[object Date]' ||
+    val instanceof Date
 }
 
 /**
@@ -49169,6 +49368,62 @@ function setWriteHeadHeaders (statusCode) {
   return args
 }
 
+var cookieSignature = {};
+
+/**
+ * Module dependencies.
+ */
+
+(function (exports) {
+	var crypto = require$$0$4;
+
+	/**
+	 * Sign the given `val` with `secret`.
+	 *
+	 * @param {String} val
+	 * @param {String|NodeJS.ArrayBufferView|crypto.KeyObject} secret
+	 * @return {String}
+	 * @api private
+	 */
+
+	exports.sign = function(val, secret){
+	  if ('string' !== typeof val) throw new TypeError("Cookie value must be provided as a string.");
+	  if (null == secret) throw new TypeError("Secret key must be provided.");
+	  return val + '.' + crypto
+	    .createHmac('sha256', secret)
+	    .update(val)
+	    .digest('base64')
+	    .replace(/\=+$/, '');
+	};
+
+	/**
+	 * Unsign and decode the given `val` with `secret`,
+	 * returning `false` if the signature is invalid.
+	 *
+	 * @param {String} val
+	 * @param {String|NodeJS.ArrayBufferView|crypto.KeyObject} secret
+	 * @return {String|Boolean}
+	 * @api private
+	 */
+
+	exports.unsign = function(val, secret){
+	  if ('string' !== typeof val) throw new TypeError("Signed cookie string must be provided.");
+	  if (null == secret) throw new TypeError("Secret key must be provided.");
+	  var str = val.slice(0, val.lastIndexOf('.'))
+	    , mac = exports.sign(str, secret);
+	  
+	  return sha1(mac) == sha1(val) ? str : false;
+	};
+
+	/**
+	 * Private
+	 */
+
+	function sha1(str){
+	  return crypto.createHash('sha1').update(str).digest('hex');
+	} 
+} (cookieSignature));
+
 var uidSafe = {exports: {}};
 
 var randomBytes$4 = {exports: {}};
@@ -49501,7 +49756,9 @@ Cookie$1.prototype = {
 
   get data() {
     return {
-      originalMaxAge: this.originalMaxAge
+      originalMaxAge: this.originalMaxAge,
+      partitioned: this.partitioned,
+      priority: this.priority
       , expires: this._expires
       , secure: this.secure
       , httpOnly: this.httpOnly
@@ -50160,7 +50417,11 @@ function getSession(sessionId) {
 
 	    // pathname mismatch
 	    var originalPath = parseUrl.original(req).pathname || '/';
-	    if (originalPath.indexOf(cookieOptions.path || '/') !== 0) return next();
+	    if (originalPath.indexOf(cookieOptions.path || '/') !== 0) {
+	      debug('pathname mismatch');
+	      next();
+	      return
+	    }
 
 	    // ensure a secret is available or bail
 	    if (!secret && !req.secret) {
@@ -50207,7 +50468,11 @@ function getSession(sessionId) {
 	      }
 
 	      // set cookie
-	      setcookie(res, name, req.sessionID, secrets[0], req.session.cookie.data);
+	      try {
+	        setcookie(res, name, req.sessionID, secrets[0], req.session.cookie.data);
+	      } catch (err) {
+	        defer(next, err);
+	      }
 	    });
 
 	    // proxy end() to commit the session
@@ -50795,7 +51060,7 @@ PACKET_TYPES["upgrade"] = "5";
 PACKET_TYPES["noop"] = "6";
 const PACKET_TYPES_REVERSE = Object.create(null);
 commons.PACKET_TYPES_REVERSE = PACKET_TYPES_REVERSE;
-Object.keys(PACKET_TYPES).forEach(key => {
+Object.keys(PACKET_TYPES).forEach((key) => {
     PACKET_TYPES_REVERSE[PACKET_TYPES[key]] = key;
 });
 const ERROR_PACKET = { type: "error", data: "parser error" };
@@ -50830,7 +51095,7 @@ commons.ERROR_PACKET = ERROR_PACKET;
 	    if (packet.data instanceof ArrayBuffer || ArrayBuffer.isView(packet.data)) {
 	        return callback(toBuffer(packet.data, false));
 	    }
-	    (0, exports.encodePacket)(packet, true, encoded => {
+	    (0, exports.encodePacket)(packet, true, (encoded) => {
 	        if (!TEXT_ENCODER) {
 	            // lazily created for compatibility with Node.js 10
 	            TEXT_ENCODER = new TextEncoder();
@@ -50850,7 +51115,7 @@ const decodePacket = (encodedPacket, binaryType) => {
     if (typeof encodedPacket !== "string") {
         return {
             type: "message",
-            data: mapBinary(encodedPacket, binaryType)
+            data: mapBinary(encodedPacket, binaryType),
         };
     }
     const type = encodedPacket.charAt(0);
@@ -50858,7 +51123,7 @@ const decodePacket = (encodedPacket, binaryType) => {
         const buffer = Buffer.from(encodedPacket.substring(1), "base64");
         return {
             type: "message",
-            data: mapBinary(buffer, binaryType)
+            data: mapBinary(buffer, binaryType),
         };
     }
     if (!commons_js_1.PACKET_TYPES_REVERSE[type]) {
@@ -50867,10 +51132,10 @@ const decodePacket = (encodedPacket, binaryType) => {
     return encodedPacket.length > 1
         ? {
             type: commons_js_1.PACKET_TYPES_REVERSE[type],
-            data: encodedPacket.substring(1)
+            data: encodedPacket.substring(1),
         }
         : {
-            type: commons_js_1.PACKET_TYPES_REVERSE[type]
+            type: commons_js_1.PACKET_TYPES_REVERSE[type],
         };
 };
 decodePacket$1.decodePacket = decodePacket;
@@ -50918,7 +51183,7 @@ const mapBinary = (data, binaryType) => {
 	    let count = 0;
 	    packets.forEach((packet, i) => {
 	        // force base64 encoding for binary packets
-	        (0, encodePacket_js_1.encodePacket)(packet, false, encodedPacket => {
+	        (0, encodePacket_js_1.encodePacket)(packet, false, (encodedPacket) => {
 	            encodedPackets[i] = encodedPacket;
 	            if (++count === length) {
 	                callback(encodedPackets.join(SEPARATOR));
@@ -50941,9 +51206,10 @@ const mapBinary = (data, binaryType) => {
 	};
 	exports.decodePayload = decodePayload;
 	function createPacketEncoderStream() {
+	    // @ts-expect-error
 	    return new TransformStream({
 	        transform(packet, controller) {
-	            (0, encodePacket_js_1.encodePacketToBinary)(packet, encodedPacket => {
+	            (0, encodePacket_js_1.encodePacketToBinary)(packet, (encodedPacket) => {
 	                const payloadLength = encodedPacket.length;
 	                let header;
 	                // inspired by the WebSocket format: https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API/Writing_WebSocket_servers#decoding_payload_length
@@ -50970,7 +51236,7 @@ const mapBinary = (data, binaryType) => {
 	                controller.enqueue(header);
 	                controller.enqueue(encodedPacket);
 	            });
-	        }
+	        },
 	    });
 	}
 	exports.createPacketEncoderStream = createPacketEncoderStream;
@@ -51004,6 +51270,7 @@ const mapBinary = (data, binaryType) => {
 	    let state = 0 /* READ_HEADER */;
 	    let expectedLength = -1;
 	    let isBinary = false;
+	    // @ts-expect-error
 	    return new TransformStream({
 	        transform(chunk, controller) {
 	            chunks.push(chunk);
@@ -51061,7 +51328,7 @@ const mapBinary = (data, binaryType) => {
 	                    break;
 	                }
 	            }
-	        }
+	        },
 	    });
 	}
 	exports.createPacketDecoderStream = createPacketDecoderStream;
@@ -71364,6 +71631,7 @@ var libExports = lib.exports;
 const INTERNAL_LOGIN_ENPOINT = '/.obsidian/plugins/obsidian-collab/login.html';
 const INTERNAL_CSS_ENPOINT = '/.obsidian/plugins/obsidian-collab/app.css';
 const tryResolveFilePath = (requestedUrl, resolveFrom, app) => {
+    console.log(`${requestedUrl}`);
     if ([INTERNAL_CSS_ENPOINT, INTERNAL_LOGIN_ENPOINT].includes(requestedUrl))
         return requestedUrl;
     const requestedFile = app.metadataCache.getFirstLinkpathDest(requestedUrl.substring(1), resolveFrom);
@@ -71416,7 +71684,10 @@ class LoginForm {
                                   <input placeholder="Username" id="username" type="text" name="username" spellcheck="false">
                                 </div>
                                 <br>
-                                <div class="html-login-form-label"><label for="password">Password:</label></div><div class="setting-item-control"><input placeholder="Password" id="password" type="password" name="password" spellcheck="false"></div>
+                                <div class="html-login-form-label"><label for="password">Password:</label></div>
+                                <div class="setting-item-control">
+                                	<input placeholder="Password" id="password" type="password" name="password" spellcheck="false">
+                                </div>
                                 <input style="display: none;" id="redirectUrl" type="text" name="redirectUrl" spellcheck="false">
                                 <br>
                                 <span class="settings-error-element" hidden id="error"></span>
@@ -71510,7 +71781,7 @@ class LoginForm {
                               <div class="html-login-form">
                                 <div class="html-login-form-label"><label for="username">Username:</label></div>
                                 <div class="setting-item-control">
-                                  <input placeholder="Username" id="username" type="text" name="username" spellcheck="false">
+                                  <input placeholder="Username" id="username" type="text" name="username" spellcheck="false" autocomplete="off">
                                 </div>
                                 <input style="display: none;" id="redirectUrl" type="text" name="redirectUrl" spellcheck="false">
                                 <br>
@@ -71768,6 +72039,2159 @@ class Navigation {
     }
 }
 
+/**
+The data structure for documents. @nonabstract
+*/
+class Text {
+    /**
+    Get the line description around the given position.
+    */
+    lineAt(pos) {
+        if (pos < 0 || pos > this.length)
+            throw new RangeError(`Invalid position ${pos} in document of length ${this.length}`);
+        return this.lineInner(pos, false, 1, 0);
+    }
+    /**
+    Get the description for the given (1-based) line number.
+    */
+    line(n) {
+        if (n < 1 || n > this.lines)
+            throw new RangeError(`Invalid line number ${n} in ${this.lines}-line document`);
+        return this.lineInner(n, true, 1, 0);
+    }
+    /**
+    Replace a range of the text with the given content.
+    */
+    replace(from, to, text) {
+        [from, to] = clip(this, from, to);
+        let parts = [];
+        this.decompose(0, from, parts, 2 /* Open.To */);
+        if (text.length)
+            text.decompose(0, text.length, parts, 1 /* Open.From */ | 2 /* Open.To */);
+        this.decompose(to, this.length, parts, 1 /* Open.From */);
+        return TextNode.from(parts, this.length - (to - from) + text.length);
+    }
+    /**
+    Append another document to this one.
+    */
+    append(other) {
+        return this.replace(this.length, this.length, other);
+    }
+    /**
+    Retrieve the text between the given points.
+    */
+    slice(from, to = this.length) {
+        [from, to] = clip(this, from, to);
+        let parts = [];
+        this.decompose(from, to, parts, 0);
+        return TextNode.from(parts, to - from);
+    }
+    /**
+    Test whether this text is equal to another instance.
+    */
+    eq(other) {
+        if (other == this)
+            return true;
+        if (other.length != this.length || other.lines != this.lines)
+            return false;
+        let start = this.scanIdentical(other, 1), end = this.length - this.scanIdentical(other, -1);
+        let a = new RawTextCursor(this), b = new RawTextCursor(other);
+        for (let skip = start, pos = start;;) {
+            a.next(skip);
+            b.next(skip);
+            skip = 0;
+            if (a.lineBreak != b.lineBreak || a.done != b.done || a.value != b.value)
+                return false;
+            pos += a.value.length;
+            if (a.done || pos >= end)
+                return true;
+        }
+    }
+    /**
+    Iterate over the text. When `dir` is `-1`, iteration happens
+    from end to start. This will return lines and the breaks between
+    them as separate strings.
+    */
+    iter(dir = 1) { return new RawTextCursor(this, dir); }
+    /**
+    Iterate over a range of the text. When `from` > `to`, the
+    iterator will run in reverse.
+    */
+    iterRange(from, to = this.length) { return new PartialTextCursor(this, from, to); }
+    /**
+    Return a cursor that iterates over the given range of lines,
+    _without_ returning the line breaks between, and yielding empty
+    strings for empty lines.
+    
+    When `from` and `to` are given, they should be 1-based line numbers.
+    */
+    iterLines(from, to) {
+        let inner;
+        if (from == null) {
+            inner = this.iter();
+        }
+        else {
+            if (to == null)
+                to = this.lines + 1;
+            let start = this.line(from).from;
+            inner = this.iterRange(start, Math.max(start, to == this.lines + 1 ? this.length : to <= 1 ? 0 : this.line(to - 1).to));
+        }
+        return new LineCursor(inner);
+    }
+    /**
+    Return the document as a string, using newline characters to
+    separate lines.
+    */
+    toString() { return this.sliceString(0); }
+    /**
+    Convert the document to an array of lines (which can be
+    deserialized again via [`Text.of`](https://codemirror.net/6/docs/ref/#state.Text^of)).
+    */
+    toJSON() {
+        let lines = [];
+        this.flatten(lines);
+        return lines;
+    }
+    /**
+    @internal
+    */
+    constructor() { }
+    /**
+    Create a `Text` instance for the given array of lines.
+    */
+    static of(text) {
+        if (text.length == 0)
+            throw new RangeError("A document must have at least one line");
+        if (text.length == 1 && !text[0])
+            return Text.empty;
+        return text.length <= 32 /* Tree.Branch */ ? new TextLeaf(text) : TextNode.from(TextLeaf.split(text, []));
+    }
+}
+// Leaves store an array of line strings. There are always line breaks
+// between these strings. Leaves are limited in size and have to be
+// contained in TextNode instances for bigger documents.
+class TextLeaf extends Text {
+    constructor(text, length = textLength(text)) {
+        super();
+        this.text = text;
+        this.length = length;
+    }
+    get lines() { return this.text.length; }
+    get children() { return null; }
+    lineInner(target, isLine, line, offset) {
+        for (let i = 0;; i++) {
+            let string = this.text[i], end = offset + string.length;
+            if ((isLine ? line : end) >= target)
+                return new Line(offset, end, line, string);
+            offset = end + 1;
+            line++;
+        }
+    }
+    decompose(from, to, target, open) {
+        let text = from <= 0 && to >= this.length ? this
+            : new TextLeaf(sliceText(this.text, from, to), Math.min(to, this.length) - Math.max(0, from));
+        if (open & 1 /* Open.From */) {
+            let prev = target.pop();
+            let joined = appendText(text.text, prev.text.slice(), 0, text.length);
+            if (joined.length <= 32 /* Tree.Branch */) {
+                target.push(new TextLeaf(joined, prev.length + text.length));
+            }
+            else {
+                let mid = joined.length >> 1;
+                target.push(new TextLeaf(joined.slice(0, mid)), new TextLeaf(joined.slice(mid)));
+            }
+        }
+        else {
+            target.push(text);
+        }
+    }
+    replace(from, to, text) {
+        if (!(text instanceof TextLeaf))
+            return super.replace(from, to, text);
+        [from, to] = clip(this, from, to);
+        let lines = appendText(this.text, appendText(text.text, sliceText(this.text, 0, from)), to);
+        let newLen = this.length + text.length - (to - from);
+        if (lines.length <= 32 /* Tree.Branch */)
+            return new TextLeaf(lines, newLen);
+        return TextNode.from(TextLeaf.split(lines, []), newLen);
+    }
+    sliceString(from, to = this.length, lineSep = "\n") {
+        [from, to] = clip(this, from, to);
+        let result = "";
+        for (let pos = 0, i = 0; pos <= to && i < this.text.length; i++) {
+            let line = this.text[i], end = pos + line.length;
+            if (pos > from && i)
+                result += lineSep;
+            if (from < end && to > pos)
+                result += line.slice(Math.max(0, from - pos), to - pos);
+            pos = end + 1;
+        }
+        return result;
+    }
+    flatten(target) {
+        for (let line of this.text)
+            target.push(line);
+    }
+    scanIdentical() { return 0; }
+    static split(text, target) {
+        let part = [], len = -1;
+        for (let line of text) {
+            part.push(line);
+            len += line.length + 1;
+            if (part.length == 32 /* Tree.Branch */) {
+                target.push(new TextLeaf(part, len));
+                part = [];
+                len = -1;
+            }
+        }
+        if (len > -1)
+            target.push(new TextLeaf(part, len));
+        return target;
+    }
+}
+// Nodes provide the tree structure of the `Text` type. They store a
+// number of other nodes or leaves, taking care to balance themselves
+// on changes. There are implied line breaks _between_ the children of
+// a node (but not before the first or after the last child).
+class TextNode extends Text {
+    constructor(children, length) {
+        super();
+        this.children = children;
+        this.length = length;
+        this.lines = 0;
+        for (let child of children)
+            this.lines += child.lines;
+    }
+    lineInner(target, isLine, line, offset) {
+        for (let i = 0;; i++) {
+            let child = this.children[i], end = offset + child.length, endLine = line + child.lines - 1;
+            if ((isLine ? endLine : end) >= target)
+                return child.lineInner(target, isLine, line, offset);
+            offset = end + 1;
+            line = endLine + 1;
+        }
+    }
+    decompose(from, to, target, open) {
+        for (let i = 0, pos = 0; pos <= to && i < this.children.length; i++) {
+            let child = this.children[i], end = pos + child.length;
+            if (from <= end && to >= pos) {
+                let childOpen = open & ((pos <= from ? 1 /* Open.From */ : 0) | (end >= to ? 2 /* Open.To */ : 0));
+                if (pos >= from && end <= to && !childOpen)
+                    target.push(child);
+                else
+                    child.decompose(from - pos, to - pos, target, childOpen);
+            }
+            pos = end + 1;
+        }
+    }
+    replace(from, to, text) {
+        [from, to] = clip(this, from, to);
+        if (text.lines < this.lines)
+            for (let i = 0, pos = 0; i < this.children.length; i++) {
+                let child = this.children[i], end = pos + child.length;
+                // Fast path: if the change only affects one child and the
+                // child's size remains in the acceptable range, only update
+                // that child
+                if (from >= pos && to <= end) {
+                    let updated = child.replace(from - pos, to - pos, text);
+                    let totalLines = this.lines - child.lines + updated.lines;
+                    if (updated.lines < (totalLines >> (5 /* Tree.BranchShift */ - 1)) &&
+                        updated.lines > (totalLines >> (5 /* Tree.BranchShift */ + 1))) {
+                        let copy = this.children.slice();
+                        copy[i] = updated;
+                        return new TextNode(copy, this.length - (to - from) + text.length);
+                    }
+                    return super.replace(pos, end, updated);
+                }
+                pos = end + 1;
+            }
+        return super.replace(from, to, text);
+    }
+    sliceString(from, to = this.length, lineSep = "\n") {
+        [from, to] = clip(this, from, to);
+        let result = "";
+        for (let i = 0, pos = 0; i < this.children.length && pos <= to; i++) {
+            let child = this.children[i], end = pos + child.length;
+            if (pos > from && i)
+                result += lineSep;
+            if (from < end && to > pos)
+                result += child.sliceString(from - pos, to - pos, lineSep);
+            pos = end + 1;
+        }
+        return result;
+    }
+    flatten(target) {
+        for (let child of this.children)
+            child.flatten(target);
+    }
+    scanIdentical(other, dir) {
+        if (!(other instanceof TextNode))
+            return 0;
+        let length = 0;
+        let [iA, iB, eA, eB] = dir > 0 ? [0, 0, this.children.length, other.children.length]
+            : [this.children.length - 1, other.children.length - 1, -1, -1];
+        for (;; iA += dir, iB += dir) {
+            if (iA == eA || iB == eB)
+                return length;
+            let chA = this.children[iA], chB = other.children[iB];
+            if (chA != chB)
+                return length + chA.scanIdentical(chB, dir);
+            length += chA.length + 1;
+        }
+    }
+    static from(children, length = children.reduce((l, ch) => l + ch.length + 1, -1)) {
+        let lines = 0;
+        for (let ch of children)
+            lines += ch.lines;
+        if (lines < 32 /* Tree.Branch */) {
+            let flat = [];
+            for (let ch of children)
+                ch.flatten(flat);
+            return new TextLeaf(flat, length);
+        }
+        let chunk = Math.max(32 /* Tree.Branch */, lines >> 5 /* Tree.BranchShift */), maxChunk = chunk << 1, minChunk = chunk >> 1;
+        let chunked = [], currentLines = 0, currentLen = -1, currentChunk = [];
+        function add(child) {
+            let last;
+            if (child.lines > maxChunk && child instanceof TextNode) {
+                for (let node of child.children)
+                    add(node);
+            }
+            else if (child.lines > minChunk && (currentLines > minChunk || !currentLines)) {
+                flush();
+                chunked.push(child);
+            }
+            else if (child instanceof TextLeaf && currentLines &&
+                (last = currentChunk[currentChunk.length - 1]) instanceof TextLeaf &&
+                child.lines + last.lines <= 32 /* Tree.Branch */) {
+                currentLines += child.lines;
+                currentLen += child.length + 1;
+                currentChunk[currentChunk.length - 1] = new TextLeaf(last.text.concat(child.text), last.length + 1 + child.length);
+            }
+            else {
+                if (currentLines + child.lines > chunk)
+                    flush();
+                currentLines += child.lines;
+                currentLen += child.length + 1;
+                currentChunk.push(child);
+            }
+        }
+        function flush() {
+            if (currentLines == 0)
+                return;
+            chunked.push(currentChunk.length == 1 ? currentChunk[0] : TextNode.from(currentChunk, currentLen));
+            currentLen = -1;
+            currentLines = currentChunk.length = 0;
+        }
+        for (let child of children)
+            add(child);
+        flush();
+        return chunked.length == 1 ? chunked[0] : new TextNode(chunked, length);
+    }
+}
+Text.empty = /*@__PURE__*/new TextLeaf([""], 0);
+function textLength(text) {
+    let length = -1;
+    for (let line of text)
+        length += line.length + 1;
+    return length;
+}
+function appendText(text, target, from = 0, to = 1e9) {
+    for (let pos = 0, i = 0, first = true; i < text.length && pos <= to; i++) {
+        let line = text[i], end = pos + line.length;
+        if (end >= from) {
+            if (end > to)
+                line = line.slice(0, to - pos);
+            if (pos < from)
+                line = line.slice(from - pos);
+            if (first) {
+                target[target.length - 1] += line;
+                first = false;
+            }
+            else
+                target.push(line);
+        }
+        pos = end + 1;
+    }
+    return target;
+}
+function sliceText(text, from, to) {
+    return appendText(text, [""], from, to);
+}
+class RawTextCursor {
+    constructor(text, dir = 1) {
+        this.dir = dir;
+        this.done = false;
+        this.lineBreak = false;
+        this.value = "";
+        this.nodes = [text];
+        this.offsets = [dir > 0 ? 1 : (text instanceof TextLeaf ? text.text.length : text.children.length) << 1];
+    }
+    nextInner(skip, dir) {
+        this.done = this.lineBreak = false;
+        for (;;) {
+            let last = this.nodes.length - 1;
+            let top = this.nodes[last], offsetValue = this.offsets[last], offset = offsetValue >> 1;
+            let size = top instanceof TextLeaf ? top.text.length : top.children.length;
+            if (offset == (dir > 0 ? size : 0)) {
+                if (last == 0) {
+                    this.done = true;
+                    this.value = "";
+                    return this;
+                }
+                if (dir > 0)
+                    this.offsets[last - 1]++;
+                this.nodes.pop();
+                this.offsets.pop();
+            }
+            else if ((offsetValue & 1) == (dir > 0 ? 0 : 1)) {
+                this.offsets[last] += dir;
+                if (skip == 0) {
+                    this.lineBreak = true;
+                    this.value = "\n";
+                    return this;
+                }
+                skip--;
+            }
+            else if (top instanceof TextLeaf) {
+                // Move to the next string
+                let next = top.text[offset + (dir < 0 ? -1 : 0)];
+                this.offsets[last] += dir;
+                if (next.length > Math.max(0, skip)) {
+                    this.value = skip == 0 ? next : dir > 0 ? next.slice(skip) : next.slice(0, next.length - skip);
+                    return this;
+                }
+                skip -= next.length;
+            }
+            else {
+                let next = top.children[offset + (dir < 0 ? -1 : 0)];
+                if (skip > next.length) {
+                    skip -= next.length;
+                    this.offsets[last] += dir;
+                }
+                else {
+                    if (dir < 0)
+                        this.offsets[last]--;
+                    this.nodes.push(next);
+                    this.offsets.push(dir > 0 ? 1 : (next instanceof TextLeaf ? next.text.length : next.children.length) << 1);
+                }
+            }
+        }
+    }
+    next(skip = 0) {
+        if (skip < 0) {
+            this.nextInner(-skip, (-this.dir));
+            skip = this.value.length;
+        }
+        return this.nextInner(skip, this.dir);
+    }
+}
+class PartialTextCursor {
+    constructor(text, start, end) {
+        this.value = "";
+        this.done = false;
+        this.cursor = new RawTextCursor(text, start > end ? -1 : 1);
+        this.pos = start > end ? text.length : 0;
+        this.from = Math.min(start, end);
+        this.to = Math.max(start, end);
+    }
+    nextInner(skip, dir) {
+        if (dir < 0 ? this.pos <= this.from : this.pos >= this.to) {
+            this.value = "";
+            this.done = true;
+            return this;
+        }
+        skip += Math.max(0, dir < 0 ? this.pos - this.to : this.from - this.pos);
+        let limit = dir < 0 ? this.pos - this.from : this.to - this.pos;
+        if (skip > limit)
+            skip = limit;
+        limit -= skip;
+        let { value } = this.cursor.next(skip);
+        this.pos += (value.length + skip) * dir;
+        this.value = value.length <= limit ? value : dir < 0 ? value.slice(value.length - limit) : value.slice(0, limit);
+        this.done = !this.value;
+        return this;
+    }
+    next(skip = 0) {
+        if (skip < 0)
+            skip = Math.max(skip, this.from - this.pos);
+        else if (skip > 0)
+            skip = Math.min(skip, this.to - this.pos);
+        return this.nextInner(skip, this.cursor.dir);
+    }
+    get lineBreak() { return this.cursor.lineBreak && this.value != ""; }
+}
+class LineCursor {
+    constructor(inner) {
+        this.inner = inner;
+        this.afterBreak = true;
+        this.value = "";
+        this.done = false;
+    }
+    next(skip = 0) {
+        let { done, lineBreak, value } = this.inner.next(skip);
+        if (done && this.afterBreak) {
+            this.value = "";
+            this.afterBreak = false;
+        }
+        else if (done) {
+            this.done = true;
+            this.value = "";
+        }
+        else if (lineBreak) {
+            if (this.afterBreak) {
+                this.value = "";
+            }
+            else {
+                this.afterBreak = true;
+                this.next();
+            }
+        }
+        else {
+            this.value = value;
+            this.afterBreak = false;
+        }
+        return this;
+    }
+    get lineBreak() { return false; }
+}
+if (typeof Symbol != "undefined") {
+    Text.prototype[Symbol.iterator] = function () { return this.iter(); };
+    RawTextCursor.prototype[Symbol.iterator] = PartialTextCursor.prototype[Symbol.iterator] =
+        LineCursor.prototype[Symbol.iterator] = function () { return this; };
+}
+/**
+This type describes a line in the document. It is created
+on-demand when lines are [queried](https://codemirror.net/6/docs/ref/#state.Text.lineAt).
+*/
+class Line {
+    /**
+    @internal
+    */
+    constructor(
+    /**
+    The position of the start of the line.
+    */
+    from, 
+    /**
+    The position at the end of the line (_before_ the line break,
+    or at the end of document for the last line).
+    */
+    to, 
+    /**
+    This line's line number (1-based).
+    */
+    number, 
+    /**
+    The line's content.
+    */
+    text) {
+        this.from = from;
+        this.to = to;
+        this.number = number;
+        this.text = text;
+    }
+    /**
+    The length of the line (not including any line break after it).
+    */
+    get length() { return this.to - this.from; }
+}
+function clip(text, from, to) {
+    from = Math.max(0, Math.min(text.length, from));
+    return [from, Math.max(from, Math.min(text.length, to))];
+}
+
+// Compressed representation of the Grapheme_Cluster_Break=Extend
+// information from
+// http://www.unicode.org/Public/13.0.0/ucd/auxiliary/GraphemeBreakProperty.txt.
+// Each pair of elements represents a range, as an offet from the
+// previous range and a length. Numbers are in base-36, with the empty
+// string being a shorthand for 1.
+let extend = /*@__PURE__*/"lc,34,7n,7,7b,19,,,,2,,2,,,20,b,1c,l,g,,2t,7,2,6,2,2,,4,z,,u,r,2j,b,1m,9,9,,o,4,,9,,3,,5,17,3,3b,f,,w,1j,,,,4,8,4,,3,7,a,2,t,,1m,,,,2,4,8,,9,,a,2,q,,2,2,1l,,4,2,4,2,2,3,3,,u,2,3,,b,2,1l,,4,5,,2,4,,k,2,m,6,,,1m,,,2,,4,8,,7,3,a,2,u,,1n,,,,c,,9,,14,,3,,1l,3,5,3,,4,7,2,b,2,t,,1m,,2,,2,,3,,5,2,7,2,b,2,s,2,1l,2,,,2,4,8,,9,,a,2,t,,20,,4,,2,3,,,8,,29,,2,7,c,8,2q,,2,9,b,6,22,2,r,,,,,,1j,e,,5,,2,5,b,,10,9,,2u,4,,6,,2,2,2,p,2,4,3,g,4,d,,2,2,6,,f,,jj,3,qa,3,t,3,t,2,u,2,1s,2,,7,8,,2,b,9,,19,3,3b,2,y,,3a,3,4,2,9,,6,3,63,2,2,,1m,,,7,,,,,2,8,6,a,2,,1c,h,1r,4,1c,7,,,5,,14,9,c,2,w,4,2,2,,3,1k,,,2,3,,,3,1m,8,2,2,48,3,,d,,7,4,,6,,3,2,5i,1m,,5,ek,,5f,x,2da,3,3x,,2o,w,fe,6,2x,2,n9w,4,,a,w,2,28,2,7k,,3,,4,,p,2,5,,47,2,q,i,d,,12,8,p,b,1a,3,1c,,2,4,2,2,13,,1v,6,2,2,2,2,c,,8,,1b,,1f,,,3,2,2,5,2,,,16,2,8,,6m,,2,,4,,fn4,,kh,g,g,g,a6,2,gt,,6a,,45,5,1ae,3,,2,5,4,14,3,4,,4l,2,fx,4,ar,2,49,b,4w,,1i,f,1k,3,1d,4,2,2,1x,3,10,5,,8,1q,,c,2,1g,9,a,4,2,,2n,3,2,,,2,6,,4g,,3,8,l,2,1l,2,,,,,m,,e,7,3,5,5f,8,2,3,,,n,,29,,2,6,,,2,,,2,,2,6j,,2,4,6,2,,2,r,2,2d,8,2,,,2,2y,,,,2,6,,,2t,3,2,4,,5,77,9,,2,6t,,a,2,,,4,,40,4,2,2,4,,w,a,14,6,2,4,8,,9,6,2,3,1a,d,,2,ba,7,,6,,,2a,m,2,7,,2,,2,3e,6,3,,,2,,7,,,20,2,3,,,,9n,2,f0b,5,1n,7,t4,,1r,4,29,,f5k,2,43q,,,3,4,5,8,8,2,7,u,4,44,3,1iz,1j,4,1e,8,,e,,m,5,,f,11s,7,,h,2,7,,2,,5,79,7,c5,4,15s,7,31,7,240,5,gx7k,2o,3k,6o".split(",").map(s => s ? parseInt(s, 36) : 1);
+// Convert offsets into absolute values
+for (let i = 1; i < extend.length; i++)
+    extend[i] += extend[i - 1];
+
+const DefaultSplit = /\r\n?|\n/;
+/**
+Distinguishes different ways in which positions can be mapped.
+*/
+var MapMode = /*@__PURE__*/(function (MapMode) {
+    /**
+    Map a position to a valid new position, even when its context
+    was deleted.
+    */
+    MapMode[MapMode["Simple"] = 0] = "Simple";
+    /**
+    Return null if deletion happens across the position.
+    */
+    MapMode[MapMode["TrackDel"] = 1] = "TrackDel";
+    /**
+    Return null if the character _before_ the position is deleted.
+    */
+    MapMode[MapMode["TrackBefore"] = 2] = "TrackBefore";
+    /**
+    Return null if the character _after_ the position is deleted.
+    */
+    MapMode[MapMode["TrackAfter"] = 3] = "TrackAfter";
+return MapMode})(MapMode || (MapMode = {}));
+/**
+A change description is a variant of [change set](https://codemirror.net/6/docs/ref/#state.ChangeSet)
+that doesn't store the inserted text. As such, it can't be
+applied, but is cheaper to store and manipulate.
+*/
+class ChangeDesc {
+    // Sections are encoded as pairs of integers. The first is the
+    // length in the current document, and the second is -1 for
+    // unaffected sections, and the length of the replacement content
+    // otherwise. So an insertion would be (0, n>0), a deletion (n>0,
+    // 0), and a replacement two positive numbers.
+    /**
+    @internal
+    */
+    constructor(
+    /**
+    @internal
+    */
+    sections) {
+        this.sections = sections;
+    }
+    /**
+    The length of the document before the change.
+    */
+    get length() {
+        let result = 0;
+        for (let i = 0; i < this.sections.length; i += 2)
+            result += this.sections[i];
+        return result;
+    }
+    /**
+    The length of the document after the change.
+    */
+    get newLength() {
+        let result = 0;
+        for (let i = 0; i < this.sections.length; i += 2) {
+            let ins = this.sections[i + 1];
+            result += ins < 0 ? this.sections[i] : ins;
+        }
+        return result;
+    }
+    /**
+    False when there are actual changes in this set.
+    */
+    get empty() { return this.sections.length == 0 || this.sections.length == 2 && this.sections[1] < 0; }
+    /**
+    Iterate over the unchanged parts left by these changes. `posA`
+    provides the position of the range in the old document, `posB`
+    the new position in the changed document.
+    */
+    iterGaps(f) {
+        for (let i = 0, posA = 0, posB = 0; i < this.sections.length;) {
+            let len = this.sections[i++], ins = this.sections[i++];
+            if (ins < 0) {
+                f(posA, posB, len);
+                posB += len;
+            }
+            else {
+                posB += ins;
+            }
+            posA += len;
+        }
+    }
+    /**
+    Iterate over the ranges changed by these changes. (See
+    [`ChangeSet.iterChanges`](https://codemirror.net/6/docs/ref/#state.ChangeSet.iterChanges) for a
+    variant that also provides you with the inserted text.)
+    `fromA`/`toA` provides the extent of the change in the starting
+    document, `fromB`/`toB` the extent of the replacement in the
+    changed document.
+    
+    When `individual` is true, adjacent changes (which are kept
+    separate for [position mapping](https://codemirror.net/6/docs/ref/#state.ChangeDesc.mapPos)) are
+    reported separately.
+    */
+    iterChangedRanges(f, individual = false) {
+        iterChanges(this, f, individual);
+    }
+    /**
+    Get a description of the inverted form of these changes.
+    */
+    get invertedDesc() {
+        let sections = [];
+        for (let i = 0; i < this.sections.length;) {
+            let len = this.sections[i++], ins = this.sections[i++];
+            if (ins < 0)
+                sections.push(len, ins);
+            else
+                sections.push(ins, len);
+        }
+        return new ChangeDesc(sections);
+    }
+    /**
+    Compute the combined effect of applying another set of changes
+    after this one. The length of the document after this set should
+    match the length before `other`.
+    */
+    composeDesc(other) { return this.empty ? other : other.empty ? this : composeSets(this, other); }
+    /**
+    Map this description, which should start with the same document
+    as `other`, over another set of changes, so that it can be
+    applied after it. When `before` is true, map as if the changes
+    in `other` happened before the ones in `this`.
+    */
+    mapDesc(other, before = false) { return other.empty ? this : mapSet(this, other, before); }
+    mapPos(pos, assoc = -1, mode = MapMode.Simple) {
+        let posA = 0, posB = 0;
+        for (let i = 0; i < this.sections.length;) {
+            let len = this.sections[i++], ins = this.sections[i++], endA = posA + len;
+            if (ins < 0) {
+                if (endA > pos)
+                    return posB + (pos - posA);
+                posB += len;
+            }
+            else {
+                if (mode != MapMode.Simple && endA >= pos &&
+                    (mode == MapMode.TrackDel && posA < pos && endA > pos ||
+                        mode == MapMode.TrackBefore && posA < pos ||
+                        mode == MapMode.TrackAfter && endA > pos))
+                    return null;
+                if (endA > pos || endA == pos && assoc < 0 && !len)
+                    return pos == posA || assoc < 0 ? posB : posB + ins;
+                posB += ins;
+            }
+            posA = endA;
+        }
+        if (pos > posA)
+            throw new RangeError(`Position ${pos} is out of range for changeset of length ${posA}`);
+        return posB;
+    }
+    /**
+    Check whether these changes touch a given range. When one of the
+    changes entirely covers the range, the string `"cover"` is
+    returned.
+    */
+    touchesRange(from, to = from) {
+        for (let i = 0, pos = 0; i < this.sections.length && pos <= to;) {
+            let len = this.sections[i++], ins = this.sections[i++], end = pos + len;
+            if (ins >= 0 && pos <= to && end >= from)
+                return pos < from && end > to ? "cover" : true;
+            pos = end;
+        }
+        return false;
+    }
+    /**
+    @internal
+    */
+    toString() {
+        let result = "";
+        for (let i = 0; i < this.sections.length;) {
+            let len = this.sections[i++], ins = this.sections[i++];
+            result += (result ? " " : "") + len + (ins >= 0 ? ":" + ins : "");
+        }
+        return result;
+    }
+    /**
+    Serialize this change desc to a JSON-representable value.
+    */
+    toJSON() { return this.sections; }
+    /**
+    Create a change desc from its JSON representation (as produced
+    by [`toJSON`](https://codemirror.net/6/docs/ref/#state.ChangeDesc.toJSON).
+    */
+    static fromJSON(json) {
+        if (!Array.isArray(json) || json.length % 2 || json.some(a => typeof a != "number"))
+            throw new RangeError("Invalid JSON representation of ChangeDesc");
+        return new ChangeDesc(json);
+    }
+    /**
+    @internal
+    */
+    static create(sections) { return new ChangeDesc(sections); }
+}
+/**
+A change set represents a group of modifications to a document. It
+stores the document length, and can only be applied to documents
+with exactly that length.
+*/
+class ChangeSet extends ChangeDesc {
+    constructor(sections, 
+    /**
+    @internal
+    */
+    inserted) {
+        super(sections);
+        this.inserted = inserted;
+    }
+    /**
+    Apply the changes to a document, returning the modified
+    document.
+    */
+    apply(doc) {
+        if (this.length != doc.length)
+            throw new RangeError("Applying change set to a document with the wrong length");
+        iterChanges(this, (fromA, toA, fromB, _toB, text) => doc = doc.replace(fromB, fromB + (toA - fromA), text), false);
+        return doc;
+    }
+    mapDesc(other, before = false) { return mapSet(this, other, before, true); }
+    /**
+    Given the document as it existed _before_ the changes, return a
+    change set that represents the inverse of this set, which could
+    be used to go from the document created by the changes back to
+    the document as it existed before the changes.
+    */
+    invert(doc) {
+        let sections = this.sections.slice(), inserted = [];
+        for (let i = 0, pos = 0; i < sections.length; i += 2) {
+            let len = sections[i], ins = sections[i + 1];
+            if (ins >= 0) {
+                sections[i] = ins;
+                sections[i + 1] = len;
+                let index = i >> 1;
+                while (inserted.length < index)
+                    inserted.push(Text.empty);
+                inserted.push(len ? doc.slice(pos, pos + len) : Text.empty);
+            }
+            pos += len;
+        }
+        return new ChangeSet(sections, inserted);
+    }
+    /**
+    Combine two subsequent change sets into a single set. `other`
+    must start in the document produced by `this`. If `this` goes
+    `docA` → `docB` and `other` represents `docB` → `docC`, the
+    returned value will represent the change `docA` → `docC`.
+    */
+    compose(other) { return this.empty ? other : other.empty ? this : composeSets(this, other, true); }
+    /**
+    Given another change set starting in the same document, maps this
+    change set over the other, producing a new change set that can be
+    applied to the document produced by applying `other`. When
+    `before` is `true`, order changes as if `this` comes before
+    `other`, otherwise (the default) treat `other` as coming first.
+    
+    Given two changes `A` and `B`, `A.compose(B.map(A))` and
+    `B.compose(A.map(B, true))` will produce the same document. This
+    provides a basic form of [operational
+    transformation](https://en.wikipedia.org/wiki/Operational_transformation),
+    and can be used for collaborative editing.
+    */
+    map(other, before = false) { return other.empty ? this : mapSet(this, other, before, true); }
+    /**
+    Iterate over the changed ranges in the document, calling `f` for
+    each, with the range in the original document (`fromA`-`toA`)
+    and the range that replaces it in the new document
+    (`fromB`-`toB`).
+    
+    When `individual` is true, adjacent changes are reported
+    separately.
+    */
+    iterChanges(f, individual = false) {
+        iterChanges(this, f, individual);
+    }
+    /**
+    Get a [change description](https://codemirror.net/6/docs/ref/#state.ChangeDesc) for this change
+    set.
+    */
+    get desc() { return ChangeDesc.create(this.sections); }
+    /**
+    @internal
+    */
+    filter(ranges) {
+        let resultSections = [], resultInserted = [], filteredSections = [];
+        let iter = new SectionIter(this);
+        done: for (let i = 0, pos = 0;;) {
+            let next = i == ranges.length ? 1e9 : ranges[i++];
+            while (pos < next || pos == next && iter.len == 0) {
+                if (iter.done)
+                    break done;
+                let len = Math.min(iter.len, next - pos);
+                addSection(filteredSections, len, -1);
+                let ins = iter.ins == -1 ? -1 : iter.off == 0 ? iter.ins : 0;
+                addSection(resultSections, len, ins);
+                if (ins > 0)
+                    addInsert(resultInserted, resultSections, iter.text);
+                iter.forward(len);
+                pos += len;
+            }
+            let end = ranges[i++];
+            while (pos < end) {
+                if (iter.done)
+                    break done;
+                let len = Math.min(iter.len, end - pos);
+                addSection(resultSections, len, -1);
+                addSection(filteredSections, len, iter.ins == -1 ? -1 : iter.off == 0 ? iter.ins : 0);
+                iter.forward(len);
+                pos += len;
+            }
+        }
+        return { changes: new ChangeSet(resultSections, resultInserted),
+            filtered: ChangeDesc.create(filteredSections) };
+    }
+    /**
+    Serialize this change set to a JSON-representable value.
+    */
+    toJSON() {
+        let parts = [];
+        for (let i = 0; i < this.sections.length; i += 2) {
+            let len = this.sections[i], ins = this.sections[i + 1];
+            if (ins < 0)
+                parts.push(len);
+            else if (ins == 0)
+                parts.push([len]);
+            else
+                parts.push([len].concat(this.inserted[i >> 1].toJSON()));
+        }
+        return parts;
+    }
+    /**
+    Create a change set for the given changes, for a document of the
+    given length, using `lineSep` as line separator.
+    */
+    static of(changes, length, lineSep) {
+        let sections = [], inserted = [], pos = 0;
+        let total = null;
+        function flush(force = false) {
+            if (!force && !sections.length)
+                return;
+            if (pos < length)
+                addSection(sections, length - pos, -1);
+            let set = new ChangeSet(sections, inserted);
+            total = total ? total.compose(set.map(total)) : set;
+            sections = [];
+            inserted = [];
+            pos = 0;
+        }
+        function process(spec) {
+            if (Array.isArray(spec)) {
+                for (let sub of spec)
+                    process(sub);
+            }
+            else if (spec instanceof ChangeSet) {
+                if (spec.length != length)
+                    throw new RangeError(`Mismatched change set length (got ${spec.length}, expected ${length})`);
+                flush();
+                total = total ? total.compose(spec.map(total)) : spec;
+            }
+            else {
+                let { from, to = from, insert } = spec;
+                if (from > to || from < 0 || to > length)
+                    throw new RangeError(`Invalid change range ${from} to ${to} (in doc of length ${length})`);
+                let insText = !insert ? Text.empty : typeof insert == "string" ? Text.of(insert.split(lineSep || DefaultSplit)) : insert;
+                let insLen = insText.length;
+                if (from == to && insLen == 0)
+                    return;
+                if (from < pos)
+                    flush();
+                if (from > pos)
+                    addSection(sections, from - pos, -1);
+                addSection(sections, to - from, insLen);
+                addInsert(inserted, sections, insText);
+                pos = to;
+            }
+        }
+        process(changes);
+        flush(!total);
+        return total;
+    }
+    /**
+    Create an empty changeset of the given length.
+    */
+    static empty(length) {
+        return new ChangeSet(length ? [length, -1] : [], []);
+    }
+    /**
+    Create a changeset from its JSON representation (as produced by
+    [`toJSON`](https://codemirror.net/6/docs/ref/#state.ChangeSet.toJSON).
+    */
+    static fromJSON(json) {
+        if (!Array.isArray(json))
+            throw new RangeError("Invalid JSON representation of ChangeSet");
+        let sections = [], inserted = [];
+        for (let i = 0; i < json.length; i++) {
+            let part = json[i];
+            if (typeof part == "number") {
+                sections.push(part, -1);
+            }
+            else if (!Array.isArray(part) || typeof part[0] != "number" || part.some((e, i) => i && typeof e != "string")) {
+                throw new RangeError("Invalid JSON representation of ChangeSet");
+            }
+            else if (part.length == 1) {
+                sections.push(part[0], 0);
+            }
+            else {
+                while (inserted.length < i)
+                    inserted.push(Text.empty);
+                inserted[i] = Text.of(part.slice(1));
+                sections.push(part[0], inserted[i].length);
+            }
+        }
+        return new ChangeSet(sections, inserted);
+    }
+    /**
+    @internal
+    */
+    static createSet(sections, inserted) {
+        return new ChangeSet(sections, inserted);
+    }
+}
+function addSection(sections, len, ins, forceJoin = false) {
+    if (len == 0 && ins <= 0)
+        return;
+    let last = sections.length - 2;
+    if (last >= 0 && ins <= 0 && ins == sections[last + 1])
+        sections[last] += len;
+    else if (len == 0 && sections[last] == 0)
+        sections[last + 1] += ins;
+    else if (forceJoin) {
+        sections[last] += len;
+        sections[last + 1] += ins;
+    }
+    else
+        sections.push(len, ins);
+}
+function addInsert(values, sections, value) {
+    if (value.length == 0)
+        return;
+    let index = (sections.length - 2) >> 1;
+    if (index < values.length) {
+        values[values.length - 1] = values[values.length - 1].append(value);
+    }
+    else {
+        while (values.length < index)
+            values.push(Text.empty);
+        values.push(value);
+    }
+}
+function iterChanges(desc, f, individual) {
+    let inserted = desc.inserted;
+    for (let posA = 0, posB = 0, i = 0; i < desc.sections.length;) {
+        let len = desc.sections[i++], ins = desc.sections[i++];
+        if (ins < 0) {
+            posA += len;
+            posB += len;
+        }
+        else {
+            let endA = posA, endB = posB, text = Text.empty;
+            for (;;) {
+                endA += len;
+                endB += ins;
+                if (ins && inserted)
+                    text = text.append(inserted[(i - 2) >> 1]);
+                if (individual || i == desc.sections.length || desc.sections[i + 1] < 0)
+                    break;
+                len = desc.sections[i++];
+                ins = desc.sections[i++];
+            }
+            f(posA, endA, posB, endB, text);
+            posA = endA;
+            posB = endB;
+        }
+    }
+}
+function mapSet(setA, setB, before, mkSet = false) {
+    // Produce a copy of setA that applies to the document after setB
+    // has been applied (assuming both start at the same document).
+    let sections = [], insert = mkSet ? [] : null;
+    let a = new SectionIter(setA), b = new SectionIter(setB);
+    // Iterate over both sets in parallel. inserted tracks, for changes
+    // in A that have to be processed piece-by-piece, whether their
+    // content has been inserted already, and refers to the section
+    // index.
+    for (let inserted = -1;;) {
+        if (a.ins == -1 && b.ins == -1) {
+            // Move across ranges skipped by both sets.
+            let len = Math.min(a.len, b.len);
+            addSection(sections, len, -1);
+            a.forward(len);
+            b.forward(len);
+        }
+        else if (b.ins >= 0 && (a.ins < 0 || inserted == a.i || a.off == 0 && (b.len < a.len || b.len == a.len && !before))) {
+            // If there's a change in B that comes before the next change in
+            // A (ordered by start pos, then len, then before flag), skip
+            // that (and process any changes in A it covers).
+            let len = b.len;
+            addSection(sections, b.ins, -1);
+            while (len) {
+                let piece = Math.min(a.len, len);
+                if (a.ins >= 0 && inserted < a.i && a.len <= piece) {
+                    addSection(sections, 0, a.ins);
+                    if (insert)
+                        addInsert(insert, sections, a.text);
+                    inserted = a.i;
+                }
+                a.forward(piece);
+                len -= piece;
+            }
+            b.next();
+        }
+        else if (a.ins >= 0) {
+            // Process the part of a change in A up to the start of the next
+            // non-deletion change in B (if overlapping).
+            let len = 0, left = a.len;
+            while (left) {
+                if (b.ins == -1) {
+                    let piece = Math.min(left, b.len);
+                    len += piece;
+                    left -= piece;
+                    b.forward(piece);
+                }
+                else if (b.ins == 0 && b.len < left) {
+                    left -= b.len;
+                    b.next();
+                }
+                else {
+                    break;
+                }
+            }
+            addSection(sections, len, inserted < a.i ? a.ins : 0);
+            if (insert && inserted < a.i)
+                addInsert(insert, sections, a.text);
+            inserted = a.i;
+            a.forward(a.len - left);
+        }
+        else if (a.done && b.done) {
+            return insert ? ChangeSet.createSet(sections, insert) : ChangeDesc.create(sections);
+        }
+        else {
+            throw new Error("Mismatched change set lengths");
+        }
+    }
+}
+function composeSets(setA, setB, mkSet = false) {
+    let sections = [];
+    let insert = mkSet ? [] : null;
+    let a = new SectionIter(setA), b = new SectionIter(setB);
+    for (let open = false;;) {
+        if (a.done && b.done) {
+            return insert ? ChangeSet.createSet(sections, insert) : ChangeDesc.create(sections);
+        }
+        else if (a.ins == 0) { // Deletion in A
+            addSection(sections, a.len, 0, open);
+            a.next();
+        }
+        else if (b.len == 0 && !b.done) { // Insertion in B
+            addSection(sections, 0, b.ins, open);
+            if (insert)
+                addInsert(insert, sections, b.text);
+            b.next();
+        }
+        else if (a.done || b.done) {
+            throw new Error("Mismatched change set lengths");
+        }
+        else {
+            let len = Math.min(a.len2, b.len), sectionLen = sections.length;
+            if (a.ins == -1) {
+                let insB = b.ins == -1 ? -1 : b.off ? 0 : b.ins;
+                addSection(sections, len, insB, open);
+                if (insert && insB)
+                    addInsert(insert, sections, b.text);
+            }
+            else if (b.ins == -1) {
+                addSection(sections, a.off ? 0 : a.len, len, open);
+                if (insert)
+                    addInsert(insert, sections, a.textBit(len));
+            }
+            else {
+                addSection(sections, a.off ? 0 : a.len, b.off ? 0 : b.ins, open);
+                if (insert && !b.off)
+                    addInsert(insert, sections, b.text);
+            }
+            open = (a.ins > len || b.ins >= 0 && b.len > len) && (open || sections.length > sectionLen);
+            a.forward2(len);
+            b.forward(len);
+        }
+    }
+}
+class SectionIter {
+    constructor(set) {
+        this.set = set;
+        this.i = 0;
+        this.next();
+    }
+    next() {
+        let { sections } = this.set;
+        if (this.i < sections.length) {
+            this.len = sections[this.i++];
+            this.ins = sections[this.i++];
+        }
+        else {
+            this.len = 0;
+            this.ins = -2;
+        }
+        this.off = 0;
+    }
+    get done() { return this.ins == -2; }
+    get len2() { return this.ins < 0 ? this.len : this.ins; }
+    get text() {
+        let { inserted } = this.set, index = (this.i - 2) >> 1;
+        return index >= inserted.length ? Text.empty : inserted[index];
+    }
+    textBit(len) {
+        let { inserted } = this.set, index = (this.i - 2) >> 1;
+        return index >= inserted.length && !len ? Text.empty
+            : inserted[index].slice(this.off, len == null ? undefined : this.off + len);
+    }
+    forward(len) {
+        if (len == this.len)
+            this.next();
+        else {
+            this.len -= len;
+            this.off += len;
+        }
+    }
+    forward2(len) {
+        if (this.ins == -1)
+            this.forward(len);
+        else if (len == this.ins)
+            this.next();
+        else {
+            this.ins -= len;
+            this.off += len;
+        }
+    }
+}
+/**
+Representation of a type of state effect. Defined with
+[`StateEffect.define`](https://codemirror.net/6/docs/ref/#state.StateEffect^define).
+*/
+class StateEffectType {
+    /**
+    @internal
+    */
+    constructor(
+    // The `any` types in these function types are there to work
+    // around TypeScript issue #37631, where the type guard on
+    // `StateEffect.is` mysteriously stops working when these properly
+    // have type `Value`.
+    /**
+    @internal
+    */
+    map) {
+        this.map = map;
+    }
+    /**
+    Create a [state effect](https://codemirror.net/6/docs/ref/#state.StateEffect) instance of this
+    type.
+    */
+    of(value) { return new StateEffect(this, value); }
+}
+/**
+State effects can be used to represent additional effects
+associated with a [transaction](https://codemirror.net/6/docs/ref/#state.Transaction.effects). They
+are often useful to model changes to custom [state
+fields](https://codemirror.net/6/docs/ref/#state.StateField), when those changes aren't implicit in
+document or selection changes.
+*/
+class StateEffect {
+    /**
+    @internal
+    */
+    constructor(
+    /**
+    @internal
+    */
+    type, 
+    /**
+    The value of this effect.
+    */
+    value) {
+        this.type = type;
+        this.value = value;
+    }
+    /**
+    Map this effect through a position mapping. Will return
+    `undefined` when that ends up deleting the effect.
+    */
+    map(mapping) {
+        let mapped = this.type.map(this.value, mapping);
+        return mapped === undefined ? undefined : mapped == this.value ? this : new StateEffect(this.type, mapped);
+    }
+    /**
+    Tells you whether this effect object is of a given
+    [type](https://codemirror.net/6/docs/ref/#state.StateEffectType).
+    */
+    is(type) { return this.type == type; }
+    /**
+    Define a new effect type. The type parameter indicates the type
+    of values that his effect holds. It should be a type that
+    doesn't include `undefined`, since that is used in
+    [mapping](https://codemirror.net/6/docs/ref/#state.StateEffect.map) to indicate that an effect is
+    removed.
+    */
+    static define(spec = {}) {
+        return new StateEffectType(spec.map || (v => v));
+    }
+    /**
+    Map an array of effects through a change set.
+    */
+    static mapEffects(effects, mapping) {
+        if (!effects.length)
+            return effects;
+        let result = [];
+        for (let effect of effects) {
+            let mapped = effect.map(mapping);
+            if (mapped)
+                result.push(mapped);
+        }
+        return result;
+    }
+}
+/**
+This effect can be used to reconfigure the root extensions of
+the editor. Doing this will discard any extensions
+[appended](https://codemirror.net/6/docs/ref/#state.StateEffect^appendConfig), but does not reset
+the content of [reconfigured](https://codemirror.net/6/docs/ref/#state.Compartment.reconfigure)
+compartments.
+*/
+StateEffect.reconfigure = /*@__PURE__*/StateEffect.define();
+/**
+Append extensions to the top-level configuration of the editor.
+*/
+StateEffect.appendConfig = /*@__PURE__*/StateEffect.define();
+let wordChar;
+try {
+    wordChar = /*@__PURE__*/new RegExp("[\\p{Alphabetic}\\p{Number}_]", "u");
+}
+catch (_) { }
+MapMode.TrackDel;
+/**
+A range associates a value with a range of positions.
+*/
+class Range {
+    constructor(
+    /**
+    The range's start position.
+    */
+    from, 
+    /**
+    Its end position.
+    */
+    to, 
+    /**
+    The value associated with this range.
+    */
+    value) {
+        this.from = from;
+        this.to = to;
+        this.value = value;
+    }
+    /**
+    @internal
+    */
+    static create(from, to, value) {
+        return new Range(from, to, value);
+    }
+}
+function cmpRange(a, b) {
+    return a.from - b.from || a.value.startSide - b.value.startSide;
+}
+class Chunk {
+    constructor(from, to, value, 
+    // Chunks are marked with the largest point that occurs
+    // in them (or -1 for no points), so that scans that are
+    // only interested in points (such as the
+    // heightmap-related logic) can skip range-only chunks.
+    maxPoint) {
+        this.from = from;
+        this.to = to;
+        this.value = value;
+        this.maxPoint = maxPoint;
+    }
+    get length() { return this.to[this.to.length - 1]; }
+    // Find the index of the given position and side. Use the ranges'
+    // `from` pos when `end == false`, `to` when `end == true`.
+    findIndex(pos, side, end, startAt = 0) {
+        let arr = end ? this.to : this.from;
+        for (let lo = startAt, hi = arr.length;;) {
+            if (lo == hi)
+                return lo;
+            let mid = (lo + hi) >> 1;
+            let diff = arr[mid] - pos || (end ? this.value[mid].endSide : this.value[mid].startSide) - side;
+            if (mid == lo)
+                return diff >= 0 ? lo : hi;
+            if (diff >= 0)
+                hi = mid;
+            else
+                lo = mid + 1;
+        }
+    }
+    between(offset, from, to, f) {
+        for (let i = this.findIndex(from, -1000000000 /* C.Far */, true), e = this.findIndex(to, 1000000000 /* C.Far */, false, i); i < e; i++)
+            if (f(this.from[i] + offset, this.to[i] + offset, this.value[i]) === false)
+                return false;
+    }
+    map(offset, changes) {
+        let value = [], from = [], to = [], newPos = -1, maxPoint = -1;
+        for (let i = 0; i < this.value.length; i++) {
+            let val = this.value[i], curFrom = this.from[i] + offset, curTo = this.to[i] + offset, newFrom, newTo;
+            if (curFrom == curTo) {
+                let mapped = changes.mapPos(curFrom, val.startSide, val.mapMode);
+                if (mapped == null)
+                    continue;
+                newFrom = newTo = mapped;
+                if (val.startSide != val.endSide) {
+                    newTo = changes.mapPos(curFrom, val.endSide);
+                    if (newTo < newFrom)
+                        continue;
+                }
+            }
+            else {
+                newFrom = changes.mapPos(curFrom, val.startSide);
+                newTo = changes.mapPos(curTo, val.endSide);
+                if (newFrom > newTo || newFrom == newTo && val.startSide > 0 && val.endSide <= 0)
+                    continue;
+            }
+            if ((newTo - newFrom || val.endSide - val.startSide) < 0)
+                continue;
+            if (newPos < 0)
+                newPos = newFrom;
+            if (val.point)
+                maxPoint = Math.max(maxPoint, newTo - newFrom);
+            value.push(val);
+            from.push(newFrom - newPos);
+            to.push(newTo - newPos);
+        }
+        return { mapped: value.length ? new Chunk(from, to, value, maxPoint) : null, pos: newPos };
+    }
+}
+/**
+A range set stores a collection of [ranges](https://codemirror.net/6/docs/ref/#state.Range) in a
+way that makes them efficient to [map](https://codemirror.net/6/docs/ref/#state.RangeSet.map) and
+[update](https://codemirror.net/6/docs/ref/#state.RangeSet.update). This is an immutable data
+structure.
+*/
+class RangeSet {
+    constructor(
+    /**
+    @internal
+    */
+    chunkPos, 
+    /**
+    @internal
+    */
+    chunk, 
+    /**
+    @internal
+    */
+    nextLayer, 
+    /**
+    @internal
+    */
+    maxPoint) {
+        this.chunkPos = chunkPos;
+        this.chunk = chunk;
+        this.nextLayer = nextLayer;
+        this.maxPoint = maxPoint;
+    }
+    /**
+    @internal
+    */
+    static create(chunkPos, chunk, nextLayer, maxPoint) {
+        return new RangeSet(chunkPos, chunk, nextLayer, maxPoint);
+    }
+    /**
+    @internal
+    */
+    get length() {
+        let last = this.chunk.length - 1;
+        return last < 0 ? 0 : Math.max(this.chunkEnd(last), this.nextLayer.length);
+    }
+    /**
+    The number of ranges in the set.
+    */
+    get size() {
+        if (this.isEmpty)
+            return 0;
+        let size = this.nextLayer.size;
+        for (let chunk of this.chunk)
+            size += chunk.value.length;
+        return size;
+    }
+    /**
+    @internal
+    */
+    chunkEnd(index) {
+        return this.chunkPos[index] + this.chunk[index].length;
+    }
+    /**
+    Update the range set, optionally adding new ranges or filtering
+    out existing ones.
+    
+    (Note: The type parameter is just there as a kludge to work
+    around TypeScript variance issues that prevented `RangeSet<X>`
+    from being a subtype of `RangeSet<Y>` when `X` is a subtype of
+    `Y`.)
+    */
+    update(updateSpec) {
+        let { add = [], sort = false, filterFrom = 0, filterTo = this.length } = updateSpec;
+        let filter = updateSpec.filter;
+        if (add.length == 0 && !filter)
+            return this;
+        if (sort)
+            add = add.slice().sort(cmpRange);
+        if (this.isEmpty)
+            return add.length ? RangeSet.of(add) : this;
+        let cur = new LayerCursor(this, null, -1).goto(0), i = 0, spill = [];
+        let builder = new RangeSetBuilder();
+        while (cur.value || i < add.length) {
+            if (i < add.length && (cur.from - add[i].from || cur.startSide - add[i].value.startSide) >= 0) {
+                let range = add[i++];
+                if (!builder.addInner(range.from, range.to, range.value))
+                    spill.push(range);
+            }
+            else if (cur.rangeIndex == 1 && cur.chunkIndex < this.chunk.length &&
+                (i == add.length || this.chunkEnd(cur.chunkIndex) < add[i].from) &&
+                (!filter || filterFrom > this.chunkEnd(cur.chunkIndex) || filterTo < this.chunkPos[cur.chunkIndex]) &&
+                builder.addChunk(this.chunkPos[cur.chunkIndex], this.chunk[cur.chunkIndex])) {
+                cur.nextChunk();
+            }
+            else {
+                if (!filter || filterFrom > cur.to || filterTo < cur.from || filter(cur.from, cur.to, cur.value)) {
+                    if (!builder.addInner(cur.from, cur.to, cur.value))
+                        spill.push(Range.create(cur.from, cur.to, cur.value));
+                }
+                cur.next();
+            }
+        }
+        return builder.finishInner(this.nextLayer.isEmpty && !spill.length ? RangeSet.empty
+            : this.nextLayer.update({ add: spill, filter, filterFrom, filterTo }));
+    }
+    /**
+    Map this range set through a set of changes, return the new set.
+    */
+    map(changes) {
+        if (changes.empty || this.isEmpty)
+            return this;
+        let chunks = [], chunkPos = [], maxPoint = -1;
+        for (let i = 0; i < this.chunk.length; i++) {
+            let start = this.chunkPos[i], chunk = this.chunk[i];
+            let touch = changes.touchesRange(start, start + chunk.length);
+            if (touch === false) {
+                maxPoint = Math.max(maxPoint, chunk.maxPoint);
+                chunks.push(chunk);
+                chunkPos.push(changes.mapPos(start));
+            }
+            else if (touch === true) {
+                let { mapped, pos } = chunk.map(start, changes);
+                if (mapped) {
+                    maxPoint = Math.max(maxPoint, mapped.maxPoint);
+                    chunks.push(mapped);
+                    chunkPos.push(pos);
+                }
+            }
+        }
+        let next = this.nextLayer.map(changes);
+        return chunks.length == 0 ? next : new RangeSet(chunkPos, chunks, next || RangeSet.empty, maxPoint);
+    }
+    /**
+    Iterate over the ranges that touch the region `from` to `to`,
+    calling `f` for each. There is no guarantee that the ranges will
+    be reported in any specific order. When the callback returns
+    `false`, iteration stops.
+    */
+    between(from, to, f) {
+        if (this.isEmpty)
+            return;
+        for (let i = 0; i < this.chunk.length; i++) {
+            let start = this.chunkPos[i], chunk = this.chunk[i];
+            if (to >= start && from <= start + chunk.length &&
+                chunk.between(start, from - start, to - start, f) === false)
+                return;
+        }
+        this.nextLayer.between(from, to, f);
+    }
+    /**
+    Iterate over the ranges in this set, in order, including all
+    ranges that end at or after `from`.
+    */
+    iter(from = 0) {
+        return HeapCursor.from([this]).goto(from);
+    }
+    /**
+    @internal
+    */
+    get isEmpty() { return this.nextLayer == this; }
+    /**
+    Iterate over the ranges in a collection of sets, in order,
+    starting from `from`.
+    */
+    static iter(sets, from = 0) {
+        return HeapCursor.from(sets).goto(from);
+    }
+    /**
+    Iterate over two groups of sets, calling methods on `comparator`
+    to notify it of possible differences.
+    */
+    static compare(oldSets, newSets, 
+    /**
+    This indicates how the underlying data changed between these
+    ranges, and is needed to synchronize the iteration.
+    */
+    textDiff, comparator, 
+    /**
+    Can be used to ignore all non-point ranges, and points below
+    the given size. When -1, all ranges are compared.
+    */
+    minPointSize = -1) {
+        let a = oldSets.filter(set => set.maxPoint > 0 || !set.isEmpty && set.maxPoint >= minPointSize);
+        let b = newSets.filter(set => set.maxPoint > 0 || !set.isEmpty && set.maxPoint >= minPointSize);
+        let sharedChunks = findSharedChunks(a, b, textDiff);
+        let sideA = new SpanCursor(a, sharedChunks, minPointSize);
+        let sideB = new SpanCursor(b, sharedChunks, minPointSize);
+        textDiff.iterGaps((fromA, fromB, length) => compare(sideA, fromA, sideB, fromB, length, comparator));
+        if (textDiff.empty && textDiff.length == 0)
+            compare(sideA, 0, sideB, 0, 0, comparator);
+    }
+    /**
+    Compare the contents of two groups of range sets, returning true
+    if they are equivalent in the given range.
+    */
+    static eq(oldSets, newSets, from = 0, to) {
+        if (to == null)
+            to = 1000000000 /* C.Far */ - 1;
+        let a = oldSets.filter(set => !set.isEmpty && newSets.indexOf(set) < 0);
+        let b = newSets.filter(set => !set.isEmpty && oldSets.indexOf(set) < 0);
+        if (a.length != b.length)
+            return false;
+        if (!a.length)
+            return true;
+        let sharedChunks = findSharedChunks(a, b);
+        let sideA = new SpanCursor(a, sharedChunks, 0).goto(from), sideB = new SpanCursor(b, sharedChunks, 0).goto(from);
+        for (;;) {
+            if (sideA.to != sideB.to ||
+                !sameValues(sideA.active, sideB.active) ||
+                sideA.point && (!sideB.point || !sideA.point.eq(sideB.point)))
+                return false;
+            if (sideA.to > to)
+                return true;
+            sideA.next();
+            sideB.next();
+        }
+    }
+    /**
+    Iterate over a group of range sets at the same time, notifying
+    the iterator about the ranges covering every given piece of
+    content. Returns the open count (see
+    [`SpanIterator.span`](https://codemirror.net/6/docs/ref/#state.SpanIterator.span)) at the end
+    of the iteration.
+    */
+    static spans(sets, from, to, iterator, 
+    /**
+    When given and greater than -1, only points of at least this
+    size are taken into account.
+    */
+    minPointSize = -1) {
+        let cursor = new SpanCursor(sets, null, minPointSize).goto(from), pos = from;
+        let openRanges = cursor.openStart;
+        for (;;) {
+            let curTo = Math.min(cursor.to, to);
+            if (cursor.point) {
+                let active = cursor.activeForPoint(cursor.to);
+                let openCount = cursor.pointFrom < from ? active.length + 1 : Math.min(active.length, openRanges);
+                iterator.point(pos, curTo, cursor.point, active, openCount, cursor.pointRank);
+                openRanges = Math.min(cursor.openEnd(curTo), active.length);
+            }
+            else if (curTo > pos) {
+                iterator.span(pos, curTo, cursor.active, openRanges);
+                openRanges = cursor.openEnd(curTo);
+            }
+            if (cursor.to > to)
+                return openRanges + (cursor.point && cursor.to > to ? 1 : 0);
+            pos = cursor.to;
+            cursor.next();
+        }
+    }
+    /**
+    Create a range set for the given range or array of ranges. By
+    default, this expects the ranges to be _sorted_ (by start
+    position and, if two start at the same position,
+    `value.startSide`). You can pass `true` as second argument to
+    cause the method to sort them.
+    */
+    static of(ranges, sort = false) {
+        let build = new RangeSetBuilder();
+        for (let range of ranges instanceof Range ? [ranges] : sort ? lazySort(ranges) : ranges)
+            build.add(range.from, range.to, range.value);
+        return build.finish();
+    }
+    /**
+    Join an array of range sets into a single set.
+    */
+    static join(sets) {
+        if (!sets.length)
+            return RangeSet.empty;
+        let result = sets[sets.length - 1];
+        for (let i = sets.length - 2; i >= 0; i--) {
+            for (let layer = sets[i]; layer != RangeSet.empty; layer = layer.nextLayer)
+                result = new RangeSet(layer.chunkPos, layer.chunk, result, Math.max(layer.maxPoint, result.maxPoint));
+        }
+        return result;
+    }
+}
+/**
+The empty set of ranges.
+*/
+RangeSet.empty = /*@__PURE__*/new RangeSet([], [], null, -1);
+function lazySort(ranges) {
+    if (ranges.length > 1)
+        for (let prev = ranges[0], i = 1; i < ranges.length; i++) {
+            let cur = ranges[i];
+            if (cmpRange(prev, cur) > 0)
+                return ranges.slice().sort(cmpRange);
+            prev = cur;
+        }
+    return ranges;
+}
+RangeSet.empty.nextLayer = RangeSet.empty;
+/**
+A range set builder is a data structure that helps build up a
+[range set](https://codemirror.net/6/docs/ref/#state.RangeSet) directly, without first allocating
+an array of [`Range`](https://codemirror.net/6/docs/ref/#state.Range) objects.
+*/
+class RangeSetBuilder {
+    finishChunk(newArrays) {
+        this.chunks.push(new Chunk(this.from, this.to, this.value, this.maxPoint));
+        this.chunkPos.push(this.chunkStart);
+        this.chunkStart = -1;
+        this.setMaxPoint = Math.max(this.setMaxPoint, this.maxPoint);
+        this.maxPoint = -1;
+        if (newArrays) {
+            this.from = [];
+            this.to = [];
+            this.value = [];
+        }
+    }
+    /**
+    Create an empty builder.
+    */
+    constructor() {
+        this.chunks = [];
+        this.chunkPos = [];
+        this.chunkStart = -1;
+        this.last = null;
+        this.lastFrom = -1000000000 /* C.Far */;
+        this.lastTo = -1000000000 /* C.Far */;
+        this.from = [];
+        this.to = [];
+        this.value = [];
+        this.maxPoint = -1;
+        this.setMaxPoint = -1;
+        this.nextLayer = null;
+    }
+    /**
+    Add a range. Ranges should be added in sorted (by `from` and
+    `value.startSide`) order.
+    */
+    add(from, to, value) {
+        if (!this.addInner(from, to, value))
+            (this.nextLayer || (this.nextLayer = new RangeSetBuilder)).add(from, to, value);
+    }
+    /**
+    @internal
+    */
+    addInner(from, to, value) {
+        let diff = from - this.lastTo || value.startSide - this.last.endSide;
+        if (diff <= 0 && (from - this.lastFrom || value.startSide - this.last.startSide) < 0)
+            throw new Error("Ranges must be added sorted by `from` position and `startSide`");
+        if (diff < 0)
+            return false;
+        if (this.from.length == 250 /* C.ChunkSize */)
+            this.finishChunk(true);
+        if (this.chunkStart < 0)
+            this.chunkStart = from;
+        this.from.push(from - this.chunkStart);
+        this.to.push(to - this.chunkStart);
+        this.last = value;
+        this.lastFrom = from;
+        this.lastTo = to;
+        this.value.push(value);
+        if (value.point)
+            this.maxPoint = Math.max(this.maxPoint, to - from);
+        return true;
+    }
+    /**
+    @internal
+    */
+    addChunk(from, chunk) {
+        if ((from - this.lastTo || chunk.value[0].startSide - this.last.endSide) < 0)
+            return false;
+        if (this.from.length)
+            this.finishChunk(true);
+        this.setMaxPoint = Math.max(this.setMaxPoint, chunk.maxPoint);
+        this.chunks.push(chunk);
+        this.chunkPos.push(from);
+        let last = chunk.value.length - 1;
+        this.last = chunk.value[last];
+        this.lastFrom = chunk.from[last] + from;
+        this.lastTo = chunk.to[last] + from;
+        return true;
+    }
+    /**
+    Finish the range set. Returns the new set. The builder can't be
+    used anymore after this has been called.
+    */
+    finish() { return this.finishInner(RangeSet.empty); }
+    /**
+    @internal
+    */
+    finishInner(next) {
+        if (this.from.length)
+            this.finishChunk(false);
+        if (this.chunks.length == 0)
+            return next;
+        let result = RangeSet.create(this.chunkPos, this.chunks, this.nextLayer ? this.nextLayer.finishInner(next) : next, this.setMaxPoint);
+        this.from = null; // Make sure further `add` calls produce errors
+        return result;
+    }
+}
+function findSharedChunks(a, b, textDiff) {
+    let inA = new Map();
+    for (let set of a)
+        for (let i = 0; i < set.chunk.length; i++)
+            if (set.chunk[i].maxPoint <= 0)
+                inA.set(set.chunk[i], set.chunkPos[i]);
+    let shared = new Set();
+    for (let set of b)
+        for (let i = 0; i < set.chunk.length; i++) {
+            let known = inA.get(set.chunk[i]);
+            if (known != null && (textDiff ? textDiff.mapPos(known) : known) == set.chunkPos[i] &&
+                !(textDiff === null || textDiff === void 0 ? void 0 : textDiff.touchesRange(known, known + set.chunk[i].length)))
+                shared.add(set.chunk[i]);
+        }
+    return shared;
+}
+class LayerCursor {
+    constructor(layer, skip, minPoint, rank = 0) {
+        this.layer = layer;
+        this.skip = skip;
+        this.minPoint = minPoint;
+        this.rank = rank;
+    }
+    get startSide() { return this.value ? this.value.startSide : 0; }
+    get endSide() { return this.value ? this.value.endSide : 0; }
+    goto(pos, side = -1000000000 /* C.Far */) {
+        this.chunkIndex = this.rangeIndex = 0;
+        this.gotoInner(pos, side, false);
+        return this;
+    }
+    gotoInner(pos, side, forward) {
+        while (this.chunkIndex < this.layer.chunk.length) {
+            let next = this.layer.chunk[this.chunkIndex];
+            if (!(this.skip && this.skip.has(next) ||
+                this.layer.chunkEnd(this.chunkIndex) < pos ||
+                next.maxPoint < this.minPoint))
+                break;
+            this.chunkIndex++;
+            forward = false;
+        }
+        if (this.chunkIndex < this.layer.chunk.length) {
+            let rangeIndex = this.layer.chunk[this.chunkIndex].findIndex(pos - this.layer.chunkPos[this.chunkIndex], side, true);
+            if (!forward || this.rangeIndex < rangeIndex)
+                this.setRangeIndex(rangeIndex);
+        }
+        this.next();
+    }
+    forward(pos, side) {
+        if ((this.to - pos || this.endSide - side) < 0)
+            this.gotoInner(pos, side, true);
+    }
+    next() {
+        for (;;) {
+            if (this.chunkIndex == this.layer.chunk.length) {
+                this.from = this.to = 1000000000 /* C.Far */;
+                this.value = null;
+                break;
+            }
+            else {
+                let chunkPos = this.layer.chunkPos[this.chunkIndex], chunk = this.layer.chunk[this.chunkIndex];
+                let from = chunkPos + chunk.from[this.rangeIndex];
+                this.from = from;
+                this.to = chunkPos + chunk.to[this.rangeIndex];
+                this.value = chunk.value[this.rangeIndex];
+                this.setRangeIndex(this.rangeIndex + 1);
+                if (this.minPoint < 0 || this.value.point && this.to - this.from >= this.minPoint)
+                    break;
+            }
+        }
+    }
+    setRangeIndex(index) {
+        if (index == this.layer.chunk[this.chunkIndex].value.length) {
+            this.chunkIndex++;
+            if (this.skip) {
+                while (this.chunkIndex < this.layer.chunk.length && this.skip.has(this.layer.chunk[this.chunkIndex]))
+                    this.chunkIndex++;
+            }
+            this.rangeIndex = 0;
+        }
+        else {
+            this.rangeIndex = index;
+        }
+    }
+    nextChunk() {
+        this.chunkIndex++;
+        this.rangeIndex = 0;
+        this.next();
+    }
+    compare(other) {
+        return this.from - other.from || this.startSide - other.startSide || this.rank - other.rank ||
+            this.to - other.to || this.endSide - other.endSide;
+    }
+}
+class HeapCursor {
+    constructor(heap) {
+        this.heap = heap;
+    }
+    static from(sets, skip = null, minPoint = -1) {
+        let heap = [];
+        for (let i = 0; i < sets.length; i++) {
+            for (let cur = sets[i]; !cur.isEmpty; cur = cur.nextLayer) {
+                if (cur.maxPoint >= minPoint)
+                    heap.push(new LayerCursor(cur, skip, minPoint, i));
+            }
+        }
+        return heap.length == 1 ? heap[0] : new HeapCursor(heap);
+    }
+    get startSide() { return this.value ? this.value.startSide : 0; }
+    goto(pos, side = -1000000000 /* C.Far */) {
+        for (let cur of this.heap)
+            cur.goto(pos, side);
+        for (let i = this.heap.length >> 1; i >= 0; i--)
+            heapBubble(this.heap, i);
+        this.next();
+        return this;
+    }
+    forward(pos, side) {
+        for (let cur of this.heap)
+            cur.forward(pos, side);
+        for (let i = this.heap.length >> 1; i >= 0; i--)
+            heapBubble(this.heap, i);
+        if ((this.to - pos || this.value.endSide - side) < 0)
+            this.next();
+    }
+    next() {
+        if (this.heap.length == 0) {
+            this.from = this.to = 1000000000 /* C.Far */;
+            this.value = null;
+            this.rank = -1;
+        }
+        else {
+            let top = this.heap[0];
+            this.from = top.from;
+            this.to = top.to;
+            this.value = top.value;
+            this.rank = top.rank;
+            if (top.value)
+                top.next();
+            heapBubble(this.heap, 0);
+        }
+    }
+}
+function heapBubble(heap, index) {
+    for (let cur = heap[index];;) {
+        let childIndex = (index << 1) + 1;
+        if (childIndex >= heap.length)
+            break;
+        let child = heap[childIndex];
+        if (childIndex + 1 < heap.length && child.compare(heap[childIndex + 1]) >= 0) {
+            child = heap[childIndex + 1];
+            childIndex++;
+        }
+        if (cur.compare(child) < 0)
+            break;
+        heap[childIndex] = cur;
+        heap[index] = child;
+        index = childIndex;
+    }
+}
+class SpanCursor {
+    constructor(sets, skip, minPoint) {
+        this.minPoint = minPoint;
+        this.active = [];
+        this.activeTo = [];
+        this.activeRank = [];
+        this.minActive = -1;
+        // A currently active point range, if any
+        this.point = null;
+        this.pointFrom = 0;
+        this.pointRank = 0;
+        this.to = -1000000000 /* C.Far */;
+        this.endSide = 0;
+        // The amount of open active ranges at the start of the iterator.
+        // Not including points.
+        this.openStart = -1;
+        this.cursor = HeapCursor.from(sets, skip, minPoint);
+    }
+    goto(pos, side = -1000000000 /* C.Far */) {
+        this.cursor.goto(pos, side);
+        this.active.length = this.activeTo.length = this.activeRank.length = 0;
+        this.minActive = -1;
+        this.to = pos;
+        this.endSide = side;
+        this.openStart = -1;
+        this.next();
+        return this;
+    }
+    forward(pos, side) {
+        while (this.minActive > -1 && (this.activeTo[this.minActive] - pos || this.active[this.minActive].endSide - side) < 0)
+            this.removeActive(this.minActive);
+        this.cursor.forward(pos, side);
+    }
+    removeActive(index) {
+        remove(this.active, index);
+        remove(this.activeTo, index);
+        remove(this.activeRank, index);
+        this.minActive = findMinIndex(this.active, this.activeTo);
+    }
+    addActive(trackOpen) {
+        let i = 0, { value, to, rank } = this.cursor;
+        // Organize active marks by rank first, then by size
+        while (i < this.activeRank.length && (rank - this.activeRank[i] || to - this.activeTo[i]) > 0)
+            i++;
+        insert(this.active, i, value);
+        insert(this.activeTo, i, to);
+        insert(this.activeRank, i, rank);
+        if (trackOpen)
+            insert(trackOpen, i, this.cursor.from);
+        this.minActive = findMinIndex(this.active, this.activeTo);
+    }
+    // After calling this, if `this.point` != null, the next range is a
+    // point. Otherwise, it's a regular range, covered by `this.active`.
+    next() {
+        let from = this.to, wasPoint = this.point;
+        this.point = null;
+        let trackOpen = this.openStart < 0 ? [] : null;
+        for (;;) {
+            let a = this.minActive;
+            if (a > -1 && (this.activeTo[a] - this.cursor.from || this.active[a].endSide - this.cursor.startSide) < 0) {
+                if (this.activeTo[a] > from) {
+                    this.to = this.activeTo[a];
+                    this.endSide = this.active[a].endSide;
+                    break;
+                }
+                this.removeActive(a);
+                if (trackOpen)
+                    remove(trackOpen, a);
+            }
+            else if (!this.cursor.value) {
+                this.to = this.endSide = 1000000000 /* C.Far */;
+                break;
+            }
+            else if (this.cursor.from > from) {
+                this.to = this.cursor.from;
+                this.endSide = this.cursor.startSide;
+                break;
+            }
+            else {
+                let nextVal = this.cursor.value;
+                if (!nextVal.point) { // Opening a range
+                    this.addActive(trackOpen);
+                    this.cursor.next();
+                }
+                else if (wasPoint && this.cursor.to == this.to && this.cursor.from < this.cursor.to) {
+                    // Ignore any non-empty points that end precisely at the end of the prev point
+                    this.cursor.next();
+                }
+                else { // New point
+                    this.point = nextVal;
+                    this.pointFrom = this.cursor.from;
+                    this.pointRank = this.cursor.rank;
+                    this.to = this.cursor.to;
+                    this.endSide = nextVal.endSide;
+                    this.cursor.next();
+                    this.forward(this.to, this.endSide);
+                    break;
+                }
+            }
+        }
+        if (trackOpen) {
+            this.openStart = 0;
+            for (let i = trackOpen.length - 1; i >= 0 && trackOpen[i] < from; i--)
+                this.openStart++;
+        }
+    }
+    activeForPoint(to) {
+        if (!this.active.length)
+            return this.active;
+        let active = [];
+        for (let i = this.active.length - 1; i >= 0; i--) {
+            if (this.activeRank[i] < this.pointRank)
+                break;
+            if (this.activeTo[i] > to || this.activeTo[i] == to && this.active[i].endSide >= this.point.endSide)
+                active.push(this.active[i]);
+        }
+        return active.reverse();
+    }
+    openEnd(to) {
+        let open = 0;
+        for (let i = this.activeTo.length - 1; i >= 0 && this.activeTo[i] > to; i--)
+            open++;
+        return open;
+    }
+}
+function compare(a, startA, b, startB, length, comparator) {
+    a.goto(startA);
+    b.goto(startB);
+    let endB = startB + length;
+    let pos = startB, dPos = startB - startA;
+    for (;;) {
+        let diff = (a.to + dPos) - b.to || a.endSide - b.endSide;
+        let end = diff < 0 ? a.to + dPos : b.to, clipEnd = Math.min(end, endB);
+        if (a.point || b.point) {
+            if (!(a.point && b.point && (a.point == b.point || a.point.eq(b.point)) &&
+                sameValues(a.activeForPoint(a.to), b.activeForPoint(b.to))))
+                comparator.comparePoint(pos, clipEnd, a.point, b.point);
+        }
+        else {
+            if (clipEnd > pos && !sameValues(a.active, b.active))
+                comparator.compareRange(pos, clipEnd, a.active, b.active);
+        }
+        if (end > endB)
+            break;
+        pos = end;
+        if (diff <= 0)
+            a.next();
+        if (diff >= 0)
+            b.next();
+    }
+}
+function sameValues(a, b) {
+    if (a.length != b.length)
+        return false;
+    for (let i = 0; i < a.length; i++)
+        if (a[i] != b[i] && !a[i].eq(b[i]))
+            return false;
+    return true;
+}
+function remove(array, index) {
+    for (let i = index, e = array.length - 1; i < e; i++)
+        array[i] = array[i + 1];
+    array.pop();
+}
+function insert(array, index, value) {
+    for (let i = array.length - 1; i >= index; i--)
+        array[i + 1] = array[i];
+    array[index] = value;
+}
+function findMinIndex(value, array) {
+    let found = -1, foundPos = 1000000000 /* C.Far */;
+    for (let i = 0; i < array.length; i++)
+        if ((array[i] - foundPos || value[i].endSide - value[found].endSide) < 0) {
+            found = i;
+            foundPos = array[i];
+        }
+    return found;
+}
+
+class PageInfo {
+    updates;
+    activeUsers;
+    doc;
+    constructor(doc_text) {
+        this.updates = new Array;
+        this.activeUsers = new Array();
+        this.doc = Text.of(doc_text.split("\n"));
+    }
+}
 class Page {
     plugin;
     head;
@@ -71778,13 +74202,13 @@ class Page {
     viewType = "markdown";
     source;
     curWidth;
-    constructor(plugin, content, path, referer, navigationOrder) {
+    constructor(plugin, markdownRenderer, source, navigationOrder) {
         this.plugin = plugin;
         const vault = plugin.app.vault;
-        this.source = plugin.app.metadataCache.getFirstLinkpathDest(path, referer);
+        this.source = source;
         this.navigation = new Navigation(plugin.app, navigationOrder);
-        this.head = new PageHead(vault.getName(), plugin.settings.faviconLink, '/.obsidian/plugins/obsidian-collab/app.css');
-        this.body = new PageBody(plugin, plugin.app.workspace, content, navigationOrder);
+        this.head = new PageHead(vault.getName(), plugin.settings.faviconLink, '/.obsidian/plugins/obsidian-collab/app.css', '/.obsidian/plugins/obsidian-collab/scripts.js', '/.obsidian/plugins/obsidian-collab/editor.bundle.js');
+        this.body = new PageBody(plugin, plugin.app.workspace, markdownRenderer, navigationOrder);
         this.scripts = new PageScriptElement(plugin);
         this.curWidth = 250;
         if (!this.source)
@@ -71812,8 +74236,11 @@ class Page {
         this.document.body;
         return this;
     }
-    retrieveHTML() {
-        return `<!DOCTYPE html><html lang="en">${this.head.retrieveHead()}${this.body.retrieveBodyHtml(this.plugin, false, this.createLeftNavBar(), this.createPageHeader(), this.createTitleContainer(this.source))}${this.scripts.retirevePageScripts(this.source)}`;
+    async retrieveHTML(markdown) {
+        const headContainer = this.head.retrieveHead();
+        const bodyContainer = await this.body.retrieveBodyHtml(this.plugin, false, this.createLeftNavBar(), this.createPageHeader(), this.createTitleContainer(this.source), markdown, this.source);
+        const scriptContainer = this.scripts.retirevePageScripts(this.source, markdown);
+        return `<!DOCTYPE html><html lang="en">${headContainer}${bodyContainer}${scriptContainer}`;
     }
     generateWebpageLayout(content) {
         if (!this.document)
@@ -72017,21 +74444,22 @@ class Page {
         const ToggleButtonSVG = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svg-icon sidebar-right"><path d="M3 3H21C22.1046 3 23 3.89543 23 5V19C23 20.1046 22.1046 21 21 21H3C1.89543 21 1 20.1046 1 19V5C1 3.89543 1.89543 3 3 3Z"></path><path d="M14 4V20"></path><path d="M20 7H17"></path><path d="M20 10H17"></path><path d="M20 13H17"></path></svg>`;
         let HeaderContainer = this.document.createElement("div");
         let HeaderSpacer = this.document.createElement("div");
+        let CurrentUser = this.document.createElement("div");
         let ActiveUsers = this.document.createElement("div");
         let ToggleButton = this.document.createElement("div");
         let ClickableIcon = this.document.createElement("div");
         HeaderContainer.setAttribute("class", "workspace-tab-header-container");
-        HeaderContainer.setAttribute('style', 'padding-right: 10px');
         HeaderSpacer.setAttribute("class", "workspace-tab-header-spacer");
-        ActiveUsers.setAttribute("class", "workspace-tab-header-tab-list workspace-user-list");
-        ToggleButton.setAttribute("class", "mod-right");
+        CurrentUser.setAttribute('class', 'workspace-tab-header-tab-user-container');
+        ActiveUsers.setAttribute("class", "workspace-user-list");
+        ToggleButton.setAttribute("class", "sidebar-toggle-button mod-right");
         ToggleButton.ariaLabel = "";
         ToggleButton.setAttribute('style', 'display: flex; justify-content: center; app-region: no-drag; cursor: pointer');
         ToggleButton.setAttribute("data-tooltip-position", "left");
         ClickableIcon.setAttribute("class", "clickable-icon");
         HeaderContainer.appendChild(HeaderSpacer);
         HeaderContainer.appendChild(ActiveUsers);
-        ActiveUsers.style.gap = '3px';
+        HeaderContainer.appendChild(CurrentUser);
         HeaderContainer.appendChild(ToggleButton);
         ToggleButton.appendChild(ClickableIcon);
         ClickableIcon.innerHTML = ToggleButtonSVG;
@@ -72072,19 +74500,117 @@ class PageHead {
     title;
     favicon;
     css;
-    constructor(title, favicon, css) {
+    js;
+    editorjs;
+    constructor(title, favicon, css, js, editorjs) {
         this.title = title;
         this.favicon = favicon;
         this.css = css;
+        this.js = js;
+        this.editorjs = js;
     }
     retrieveHead() {
         return `<head>
 	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge" />
 	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 	<title>${this.title}</title>
 	<link rel="shortcut icon" href="${this.favicon}">
-	<link href="${this.css}" type="text/css" rel="stylesheet">
 	<script src="https://cdn.socket.io/4.7.4/socket.io.min.js" integrity="sha384-Gr6Lu2Ajx28mzwyVR8CFkULdCU7kMlZ9UthllibdOSo6qAiN+yXNHqtgdTvFXMT4" crossorigin="anonymous"></script>
+	
+	<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+	
+	<script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+	
+<!--	<script src="https://cdn.jsdelivr.net/npm/jquery-caret@1.3.7/jquery.caret.min.js"></script>-->
+	
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror/lib/codemirror.css">
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror/addon/fold/foldgutter.css">
+	
+	<script src="https://cdn.jsdelivr.net/npm/codemirror/lib/codemirror.js"></script>
+	
+	<script src="https://cdn.jsdelivr.net/npm/codemirror/keymap/vim.min.js"></script>
+	
+	<script src="https://cdn.jsdelivr.net/npm/codemirror/addon/fold/indent-fold.min.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/codemirror/addon/edit/continuelist.min.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/codemirror/addon/selection/active-line.min.js"></script>
+	
+	<script type="importmap">
+		{
+		"imports": {
+    			"@uiw/codemirror-extensions-basic-setup": "https://cdn.jsdelivr.net/npm/@uiw/codemirror-extensions-basic-setup@4.21.21/+esm",
+				"@codemirror/state": "https://cdn.jsdelivr.net/npm/@codemirror/state@6.4.0/+esm",
+    			"@codemirror/view": "https://cdn.jsdelivr.net/npm/@codemirror/view@6.23.1/+esm",
+    			"@codemirror/language": "https://cdn.jsdelivr.net/npm/@codemirror/language@6.10.1/+esm",
+    			"@codemirror/search": "https://cdn.jsdelivr.net/npm/@codemirror/search@6.5.6/+esm",
+    			"@codemirror/collab": "https://cdn.jsdelivr.net/npm/@codemirror/collab@6.1.1/+esm"
+			}
+		}
+	</script>
+<!--	<script type="module" src="https://cdn.jsdelivr.net/npm/@codemirror/state@6.4.0/dist/index.min.js"></script>-->
+<!--	<script type="module" src="https://cdn.jsdelivr.net/npm/@codemirror/lang-javascript@6.2.1/dist/index.min.js"></script>-->
+<!--	<script type="module" src="https://cdn.jsdelivr.net/npm/@codemirror/collab@6.1.1/dist/index.min.js"></script>-->
+<!--	<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/addon/fold/indent-fold.min.js" integrity="sha512-Q6g5qQfa6ko+Y+0BwAciUAq01qxgfScTPFP2Fsrr+zIrTe5Yq3tN5xaA919MmBs/1RMz/jyctknYavjc3k+/xg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>-->
+<!--	<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/addon/edit/continuelist.min.js" integrity="sha512-eAuQaBSvlaYxR3d+ow+tm+393cV1VanYI4j7GWHEpjuKhxaIUPbHzADL6qxJa0/7ECIKcQzPxat9o6rvIyGxhA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>-->
+<!--	<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/addon/selection/active-line.min.js" integrity="sha512-0sDhEPgX5DsfNcL5ty4kP6tR8H2vPkn40GwA0RYTshkbksURAlsRVnG4ECPPBQh7ZYU6S3rGvp5uhlGQUNrcmA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>-->
+<!--	<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/addon/scroll/scrollpastend.min.js" integrity="sha512-D8WvWYfmRQwXla2tt9juJPMe5ED2le0e3vzZ4s9BGF9Ioqrfw8/tja6R8pHjXfxFxGf7dqonLpLtP7sVJlUSvQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>-->
+	
+	<script src="https://cdn.jsdelivr.net/npm/codemirror/addon/search/searchcursor.min.js"></script>
+<!--	<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/addon/search/searchcursor.min.js" integrity="sha512-+ZfZDC9gi1y9Xoxi9UUsSp+5k+AcFE0TRNjI0pfaAHQ7VZTaaoEpBZp9q9OvHdSomOze/7s5w27rcsYpT6xU6g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>-->
+	
+	<script src="https://cdn.jsdelivr.net/npm/codemirror/addon/fold/foldcode.js"></script>
+	<!-- Below is important for MD folding -->
+	<script src="https://cdn.jsdelivr.net/npm/codemirror/addon/fold/foldgutter.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/codemirror/addon/fold/markdown-fold.js"></script>
+	
+	<script src="https://cdn.jsdelivr.net/npm/codemirror/addon/mode/overlay.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/codemirror/mode/meta.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/codemirror/mode/markdown/markdown.js"></script>
+	
+	<script src="https://cdn.jsdelivr.net/npm/codemirror/mode/xml/xml.js"></script>
+	<!-- for embedded HTML -->
+	<script src="https://cdn.jsdelivr.net/npm/codemirror/mode/stex/stex.js"></script>
+	<!-- for Math TeX Formular -->
+	<script src="https://cdn.jsdelivr.net/npm/codemirror/mode/yaml/yaml.js"></script>
+	<!-- for Front Matters -->
+	
+	<script src="https://cdn.jsdelivr.net/npm/codemirror/mode/javascript/javascript.js"></script>
+	<!-- load more for code blocks -->
+	
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/hypermd/mode/hypermd.css" type="text/css">
+<!--	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/hypermd/theme/hypermd-light.css" type="text/css">-->
+<!--	<script type="text/x-mathjax-config">-->
+<!--		MathJax.Hub.Config({-->
+<!--        	jax: ["input/TeX", "output/HTML-CSS","output/NativeMML","output/SVG"],-->
+<!--        	extensions: ["MathMenu.js","MathZoom.js", "AssistiveMML.js", "a11y/accessibility-menu.js"],-->
+<!--        	TeX: {-->
+<!--            	extensions: ["AMSmath.js","AMSsymbols.js","noErrors.js","noUndefined.js"]-->
+<!--        	}-->
+<!--    	});-->
+<!--  	</script>-->
+	<script src="https://cdn.jsdelivr.net/npm/mathjax/MathJax.js"></script>
+<!--	<script src="https://cdn.jsdelivr.net/npm/powerpack/fold-math-with-mathjax.js"></script>-->
+	
+	<!-- marked and powerpack/hover-with-marked -->
+	<script src="https://cdn.jsdelivr.net/npm/marked/lib/marked.js"></script>
+<!--	<script src="https://cdn.jsdelivr.net/npm/powerpack/hover-with-marked.js"></script>-->
+	
+	<script src="https://cdn.jsdelivr.net/npm/turndown/dist/turndown.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/turndown-plugin-gfm/dist/turndown-plugin-gfm.js"></script>
+<!--	<script src="https://cdn.jsdelivr.net/npm/powerpack/paste-with-turndown.js"></script>-->
+
+	<script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+<!--	<script src="https://cdn.jsdelivr.net/npm/requirejs/require.js"></script>-->
+	<script src="https://cdn.jsdelivr.net/npm/hypermd/ai1.js"></script>
+	<!-- <script src="https://cdn.jsdelivr.net/npm/hypermd/everything.js"></script>-->
+<!--	<script src="https://cdn.jsdelivr.net/npm/hypermd/mode/hypermd.js"></script>-->
+<!--	<script src="https://cdn.jsdelivr.net/npm/hypermd/goods/patch-requirejs.js"></script>-->
+<!--	<style>-->
+<!--		.workspace-tab-header-tab-list > :not(:first-child) {-->
+<!--			margin-left: 5px;-->
+<!--		}-->
+<!--	</style>-->
+	<link href="${this.css}" type="text/css" rel="stylesheet">
 </head>`;
     }
 }
@@ -72092,18 +74618,18 @@ class PageBody {
     workspace;
     workspaceRibbon;
     navMenu;
-    markdown;
+    markdownRenderer;
     workspaceModRoot;
     modRightSplit;
-    constructor(plugin, workspace, content, navigationOrder) {
+    constructor(plugin, workspace, markdownRenderer, navigationOrder) {
         this.workspace = workspace;
         this.workspaceRibbon = workspace.containerEl.querySelector(`div.workspace-ribbon.side-dock-ribbon.mod-left`);
         this.navMenu = new Navigation(plugin.app, navigationOrder);
-        this.markdown = content;
+        this.markdownRenderer = markdownRenderer;
         this.workspaceModRoot = ``;
         this.modRightSplit = ``;
     }
-    retrieveBodyHtml(plugin, useTitlebar, leftSideDock, pageHeader, titleContainer) {
+    async retrieveBodyHtml(plugin, useTitlebar, leftSideDock, pageHeader, titleContainer, markdown, source) {
         var tempDivElement = document.createElement('div');
         var tempPageHeader = document.createElement('div');
         var tempTitleContainer = document.createElement('div');
@@ -72111,7 +74637,17 @@ class PageBody {
         tempPageHeader.appendChild(pageHeader);
         tempTitleContainer.appendChild(titleContainer);
         let theme = `${document.body.classList.contains('theme-dark') ? 'theme-dark' : 'theme-light'}`;
-        let classString = `mod-windows is-frameless is-maximized is-hidden-frameless obsidian-app show-inline-title show-view-header`;
+        let modeOnStart = 'preview';
+        let isLivePreview = true;
+        let classString = `mod-windows is-frameless is-maximized is-hidden-frameless obsidian-app ${''} show-view-header`;
+        var el = document.createElement('div');
+        const leaf = new obsidian.WorkspaceLeaf(plugin.app);
+        leaf.containerEl = el;
+        leaf.view = new obsidian.MarkdownView(leaf);
+        let curEditor = new obsidian.MarkdownView(leaf).editor.getDoc();
+        curEditor.setValue(markdown);
+        let initializedMarkdown = await this.markdownRenderer.renderHtmlFromMarkdown(markdown, source, 'preview');
+        await this.markdownRenderer.renderHtmlFromMarkdown(markdown, source, 'source');
         return `<body class="${theme} ${classString}" style="--zoom-factor:1; --font-text-size:16px;">
 	${(useTitlebar) ? this.retrieveTitlebar() : ''}
 	<div class="app-container">
@@ -72128,7 +74664,8 @@ class PageBody {
 						${tempPageHeader.innerHTML}
 						<div class="workspace-tab-container">
 							<div class="workspace-leaf">
-								<div class="workspace-leaf-content" data-type="markdown" data-mode="preview">
+								<hr class="workspace-leaf-resize-handle">
+								<div class="workspace-leaf-content" data-type="markdown" data-mode="${modeOnStart}">
 									<div class="view-header">
 										${tempTitleContainer.innerHTML}
 										<div class="view-actions">
@@ -72153,33 +74690,8 @@ class PageBody {
 										</div>
 									</div>
 									<div class="view-content">
-										<div class="markdown-source-view cm-s-obsidian mod-cm6 is-live-preview is-folding show-properties node-insert-event" style="display: none;">
-											<div aria-live="polite" style="position: fixed; top: -10000px;"></div>
-											<div tabindex="-1" class="cm-scroller">
-												<div class="cm-sizer">
-													<div class="inline-title" contenteditable="true" spellcheck="true" autocapitalize="on" tabindex="-1" enterkeyhint="done">file1</div>
-													<div class="metadata-container" tabindex="-1" data-property-count="0"><div class="metadata-properties-heading" tabindex="0"><div class="collapse-indicator collapse-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svg-icon right-triangle"><path d="M3 8L12 17L21 8"></path></svg></div><div class="metadata-properties-title">Properties</div></div><div class="metadata-content"><div class="metadata-properties"></div><div class="metadata-add-button text-icon-button" tabindex="0"><span class="text-button-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svg-icon lucide-plus"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg></span><span class="text-button-label">Add property</span></div></div></div>
-													<div class="cm-contentContainer">
-														<div oninput="saveText()" spellcheck="true" autocorrect="on" autocapitalize="on" translate="no" contenteditable="true" class="cm-content cm-lineWrapping" role="textbox" aria-multiline="true" data-language="hypermd" style="width: 100%;">
-															${this.markdown}
-														</div>
-													</div>
-													<div class="embedded-backlinks" style="display: none;"></div>
-												</div>
-											</div>
-										</div>
-										<div class="markdown-reading-view" style="width: 100%; height: 100%;">
-											<div class="markdown-preview-view markdown-rendered node-insert-event is-readable-line-width allow-fold-headings show-indentation-guide allow-fold-lists" tabindex="-1" style="tab-size: 4; height: 100% !important;">
-												<div class="markdown-preview-sizer markdown-preview-section" style="min-height: calc(100% - var(--file-margins));">
-													<div class="markdown-preview-pusher" style="width: 1px; height: 0.1px; margin-bottom: 0px;"></div>
-													<div class="mod-header"></div>
-													${this.markdown}
-													<div class="mod-footer">
-														<div class="embedded-backlinks" style="display: none;"></div>
-													</div>
-												</div>
-											</div>
-										</div>
+										${this.retrieveEditorContent(isLivePreview)}
+										${this.retrievePreviewMode(initializedMarkdown)}
 									</div>
 								</div>
 							</div>
@@ -72246,16 +74758,372 @@ class PageBody {
 	</div>
 </div>`;
     }
+    retrievePreviewMode(previewContainer) {
+        return `<div class="markdown-reading-view" style="width: 100%; height: 100%;">
+	<div class="markdown-preview-view markdown-rendered node-insert-event is-readable-line-width allow-fold-headings show-indentation-guide allow-fold-lists" tabindex="-1" style="tab-size: 4; height: 100% !important;">
+		<div class="markdown-preview-sizer markdown-preview-section" style="min-height: calc(100% - var(--file-margins));">
+			<div class="markdown-preview-pusher" style="width: 1px; height: 0.1px; margin-bottom: 0px;"></div>
+			<div class="mod-header"></div>
+			${previewContainer.innerHTML}
+			<div class="mod-footer">
+				<div class="embedded-backlinks" style="display: none;"></div>
+			</div>
+		</div>
+	</div>
+</div>`;
+    }
+    retrieveEditorContent(isLivePreview) {
+        return `<div class="markdown-source-view cm-s-obsidian mod-cm6 is-live-preview is-folding show-properties node-insert-event ${(isLivePreview) ? 'is-live-preview' : ''}" style="display: none;"></div>`;
+    }
 }
 class PageScriptElement {
-    plugin;
     scripts;
+    plugin;
     constructor(plugin) {
-        this.plugin = plugin;
         this.scripts = '';
+        this.plugin = plugin;
     }
-    retirevePageScripts(file) {
+    retirevePageScripts(file, markdown) {
         return `
+<script type="module">
+	import { EditorState, RangeSetBuilder, ChangeSet, StateField, StateEffect,EditorSelection } from "@codemirror/state";
+    import { Text } from "@codemirror/state";
+	import { EditorView, Decoration, ViewPlugin, ViewUpdate, WidgetType, showTooltip, drawSelection,keymap } from "@codemirror/view"; 
+    import {basicSetup, minimalSetup} from "@uiw/codemirror-extensions-basic-setup";
+    import { syntaxTree } from '@codemirror/language';
+    import { collab, receiveUpdates, sendableUpdates, rebaseUpdates, getSyncedVersion } from '@codemirror/collab';
+    
+    let initialDoc = \`${markdown}\`;
+    const curUserContainer = document.querySelector("div.workspace-tab-header-tab-user-container");
+    let currentUser = document.querySelector("div.current-user");
+    const pagePath = getFilePath();
+    const socketIO = io();
+    let editor = null;
+    
+    let cursorPositions = new Map();
+    let decorations = Decoration.none;
+    
+    function getFilePath() {
+        const currentUrl = window.location.href;
+		console.log(currentUrl);
+        let pagepath = '';
+        const pageParents = document.querySelector("div.view-header-title-container");
+        const pageTitle = document.querySelector("div.view-header-title-container div.view-header-title");
+        const breadcrumbs = Array.from(pageParents.getElementsByClassName('view-header-breadcrumb'));
+        pagepath = breadcrumbs.map(function(span) {if (span.innerText !== '') {return span.innerText}}).join('/');
+        pagepath += ((pagepath !== '')? '/':'')+pageTitle.innerText+'.md';
+        console.log(pagepath);
+        return pagepath;
+    }
+    
+    function getCursorTooltips(state) {
+    	return state.selection.ranges.filter(range => range.empty).map(range => {
+            let text = currentUser?.title;
+            return {
+                pos: range.head, // makes a small offset to put the hover over the cursor
+                above: true,
+        		strictSide: true,
+        		arrow: false,
+        		create: () => {
+          			let dom = document.createElement("div");
+          			dom.className = "cm-tooltip-cursor";
+          			dom.title = currentUser?.title;
+       				dom.textContent = text;
+          			return { dom };
+        		}
+      		}
+    	})
+	}
+	
+	const cursorTooltipField = StateField.define({
+        create: getCursorTooltips,
+        update(tooltips, tr) {
+            if (!tr.docChanged && !tr.selection) return tooltips
+            return getCursorTooltips(tr.state)
+       	},
+       	// Look into hoverTooltip instead of using showTooltip
+  		provide: f => showTooltip.computeN([f], state => state.field(f))
+	});
+	
+	
+	// =====================  Collab Section  ======================
+	async function pushUpdates(version, fullUpdates) {
+		// Strip off transaction data
+		let curUpdates = fullUpdates.map(u => ({
+			clientID: u.clientID,
+			changes: u.changes.toJSON()
+		}));
+		// console.log(curUpdates);
+		return new Promise((resolve, reject) => {
+			// console.log('in promise for pushUpdates');
+			socketIO.emit("pushUpdates", pagePath, version, curUpdates);
+			socketIO.once("pushedUpdates", (latestVersion, updates) => {
+				console.log('getting updates back from pushUpdates');
+				resolve(updates);
+			});
+		});
+	}
+
+	async function pullUpdates(version) {
+		console.log('pullingUpdates with version: ', version);
+		
+		return new Promise((resolve, reject) => {
+			socketIO.emit("pullUpdates", pagePath, version);
+        	socketIO.on("pulledUpdates", (latestVersion, updates) => {
+				if (latestVersion > version) {
+					console.log('getting updates back from pullUpdates');
+					const curUpdates = updates.map(u => ({ changes: ChangeSet.fromJSON(u.changes), clientID: u.clientID }));
+					resolve(curUpdates);
+				} else {
+					console.log('No new updates');
+					resolve([]);
+				}
+        	});
+    	});
+    }
+	
+	function peerExtension(startVersion) {
+		let plugin = ViewPlugin.fromClass(
+	  		class {
+      			pushing = false
+      			done = false
+
+				constructor(view) {
+					this.view = view
+					this.pull()
+				}
+	
+				update(update) {
+					if (update.docChanged) {
+						this.push()
+					} else {
+						console.log('No change when calling update');
+					}
+				}
+	
+				async push() {
+					let updates = sendableUpdates(this.view.state);
+					if (this.pushing || !updates.length) return
+					this.pushing = true;
+					let version = getSyncedVersion(this.view.state);
+					console.log('pushUpdates is true...');
+					await pushUpdates(version, updates);
+					console.log('After await pushUpdates...');
+					this.pushing = false
+					// Regardless of whether the push failed or new updates came in
+					// while it was running, try again if there's updates remaining
+					if (sendableUpdates(this.view.state).length) setTimeout(() => this.push(), 100)
+				}
+		
+				async pull() {
+					while (!this.done) {
+						let version = getSyncedVersion(this.view.state)
+						let updates = await pullUpdates(version);
+						console.log('pulling updates...');
+						console.log(updates);
+						this.view.dispatch(receiveUpdates(this.view.state, updates))
+					}
+				}
+				destroy() { this.done = true }
+			}
+		)
+		return [collab({ startVersion }), plugin]
+	}
+	
+	// ================================================================
+    
+    function assignTooltipTheme(curUser) {
+    	return EditorView.baseTheme({
+			".cm-tooltip.cm-tooltip-cursor": {
+				backgroundColor: curUser.userColor,  // TODO add curUser div to get assigned color for current user
+				color: "white",
+				border: "none",
+				padding: "2px 7px",
+				borderRadius: "4px",
+				fontSize: "12px",
+				margin: "5px auto auto",
+				"& .cm-tooltip-arrow:before": {
+					borderTopColor: curUser.userColor,
+				},
+				"& .cm-tooltip-arrow:after": {
+					borderTopColor: "transparent"
+				}
+			},
+			"&.cm-focused .cm-cursor": {
+				borderLeftColor: curUser.userColor,
+				borderLeftWidth: "2px",
+			},
+		})
+    }
+    
+    function cursorTooltip(curUser) {return [cursorTooltipField, assignTooltipTheme(curUser)]}
+	
+	function getCursor(line, ch) {return {line: line.number, ch: ch};}
+    
+    function loadEditorStateAndView(curUser, version, curDoc) {
+    	currentUser = document.querySelector("div.current-user");
+    	console.log('Current version');
+    	console.log(version);
+    	console.log('Current doc');
+    	console.log(curDoc);
+    	console.log((version != null)? version : 1);
+    	const startState = EditorState.create({
+			doc: curDoc,
+			extensions: [
+				basicSetup({
+					allowMultipleSelections: false, // Will most likely try to find support for this later
+					lineNumbers: true,
+					foldGutter: true,
+					indentOnInput: true,
+					dropCursor: true,
+				}), 
+				drawSelection({cursorBlinkRate: 0}),
+				cursorTooltip(curUser),
+				peerExtension((version != null)? version:0),
+				//dynamicLineClassPlugin,
+				// externalCursorPlugin, externalCursorPositions,
+			],
+		});
+		if (editor) {return}
+		editor = new EditorView({
+			state: startState,
+			parent: document.querySelector('div.markdown-source-view'),
+			dispatch: (transaction => {
+				editor.update([transaction]);
+				// console.log(transaction);
+				// console.log('Did doc change?');
+				// console.log(transaction.docChanged);
+				// console.log('annotation');
+				// console.log(transaction.annotation);
+				if (transaction.docChanged) {
+					const updates = sendableUpdates(editor.state);
+					console.log(updates);
+					console.log('Reccent change');
+					console.log(updates[updates.length-1].changes);
+				}
+				// if (transaction.selection) {
+				// 	const cursorPos = editor.state.selection.main.head;
+				// 	const curLine = editor.state.doc.lineAt(cursorPos);
+				// 	const userCursor = getCursor(curLine, (cursorPos - curLine.from));
+				// 	// cursorPositions.set(, userCursor);
+				// 	socketIO.emit('cursorMove', pagePath, userCursor);
+				// }
+			}),
+		});
+    }
+	
+	document.addEventListener("DOMContentLoaded", function () {
+        const userListContainer = document.querySelector('div.workspace-user-list');
+        socketIO.emit('join', pagePath); // TODO data doesn't change so fix this later
+        
+        socketIO.on('RenderEditor', (curUser, version, curDoc) => {
+            console.log('Rending editor for ', curUser.username);
+            if (curUserContainer.innerHTML === '') {
+                curUserContainer.appendChild(createUserCircle(curUser, false, true));
+            }
+            console.log(curUserContainer);
+            loadEditorStateAndView(curUser, version, curDoc);
+        });
+        
+        // function convertToDocPosition(state, {line, ch}) {
+        // 	const lineInfo = state.doc.line(line);
+        // 	return lineInfo.from + ch;
+		// }
+        
+        socketIO.on('cursorUpdate', (curUser, cursorPositions) => {
+			console.log('Cursor position:');
+			console.log(cursorPositions);
+			
+			// Convert the recieved cursor position back to a Codemirror position
+			// const pos = convertToDocPosition(editor.state, cursorPosition);
+			//
+			// decorations = Decoration.set([cursorPosition]);
+			// updateCursorDecoration(curUser, cursorPositions);
+			// editor.dispatch({
+			// 	effects: StateEffect.appendConfig.of(decorations),
+			// });
+			
+			// editor.dispath({
+			// 	effects: StateEffect.appendConfig.of(
+			// 		Decoration.set([Decoration.widget({
+			// 			widget: new WidgetType(cursorElement),
+			// 			pos: pos.pos
+			// 		})])
+			// 	)
+			// });
+		});
+        
+        socketIO.on('updatedUserList', (curUser, newPage, fileSubscriptions) => {
+			console.log('---- UPDATEDUSERLIST ----');
+            console.log(fileSubscriptions);
+            console.log(fileSubscriptions[pagePath]);
+            updateActiveUsersOnPageUI(curUser, fileSubscriptions[pagePath]);
+            updateNavigationUsersUI(fileSubscriptions);
+            for (const user of fileSubscriptions[pagePath]) {  // create map of all users and default cursor positions
+            	if (!cursorPositions.get(user)) {
+            		cursorPositions.set(user, {line: 0, ch: 0});
+            	}
+            }
+		});
+        
+		function updateActiveUsersOnPageUI(curUser, users) {
+			userListContainer.innerHTML = ''; // Clear the previous content
+			
+			const maxDisplayUsers = 4;
+		   	
+			for (let i = 0; i < Math.min(users.length, maxDisplayUsers); i++) {
+				if (currentUser.title === users[i].username) {continue}
+				const userCircle = createUserCircle(users[i], false, false);
+				userListContainer.appendChild(userCircle);
+			}
+			if (users.length > maxDisplayUsers) {
+				const moreCircle = createMoreCircle(users.length - maxDisplayUsers);
+				userListContainer.appendChild(moreCircle);
+			}
+		}
+        
+        function updateNavigationUsersUI(fileSubscriptions) {
+            document.querySelectorAll('div.nav-file-users[data-path$=".md"]').forEach((file) => file.innerHTML = '');
+            for (const filePath in fileSubscriptions) {
+                const navFile = document.querySelector('div.nav-file-users[data-path="'+filePath+'"]');
+                navFile.innerHTML = '';
+                for (let i = 0; i < fileSubscriptions[filePath].length; i++) {
+                    const user = fileSubscriptions[filePath][i];
+                    const userCircle = createUserCircle(user, true, false);
+                    navFile.appendChild(userCircle);
+                }
+			}
+        }
+	   
+		function createUserCircle(user, isFileNav, isCurUser) {
+			const userContainer = document.createElement('div');
+			const userCircle = document.createElement('div');
+			const userSVG = '<svg width="25px" height="25px" viewBox="0 0 24.00 24.00" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="var(--interactive-accent)" stroke-width="0.00024000000000000003"><g id="SVGRepo_bgCarrier" stroke-width="0" transform="translate(2.040000000000001,2.040000000000001), scale(0.83)"><rect x="0" y="0" width="24.00" height="24.00" rx="12" fill="#ffffff" strokewidth="0"></rect></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round" stroke="#CCCCCC" stroke-width="0.43200000000000005"></g><g id="SVGRepo_iconCarrier"> <path opacity="0.5" d="M22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12Z" fill="var(--interactive-accent)"></path> <path d="M16.807 19.0112C15.4398 19.9504 13.7841 20.5 12 20.5C10.2159 20.5 8.56023 19.9503 7.193 19.0111C6.58915 18.5963 6.33109 17.8062 6.68219 17.1632C7.41001 15.8302 8.90973 15 12 15C15.0903 15 16.59 15.8303 17.3178 17.1632C17.6689 17.8062 17.4108 18.5964 16.807 19.0112Z" fill="var(--interactive-accent)"></path> <path d="M12 12C13.6569 12 15 10.6569 15 9C15 7.34315 13.6569 6 12 6C10.3432 6 9.00004 7.34315 9.00004 9C9.00004 10.6569 10.3432 12 12 12Z" fill="var(--interactive-accent)"></path> </g></svg>';
+		    
+            userContainer.className = 'user-container' + ((isCurUser)? ' current-user': '') + ((isFileNav)? ' nav-user': '');
+			userContainer.title = user.username;
+            
+			userCircle.className = 'user-circle';
+            userCircle.innerHTML = userSVG;
+			userCircle.style.color = user.userColor;
+			userContainer.appendChild(userCircle);
+			return userContainer;
+		}
+        
+	   	function createMoreCircle(count) { //TODO check if this renders!!!!
+		   	const moreCircle = document.createElement('div');
+			moreCircle.className = 'moreCircle';
+			moreCircle.textContent = '+'+count.toString();
+			moreCircle.title = 'Click to view more users';
+			moreCircle.addEventListener('click', () => {
+				// Implement logic to show a modal or expand the user list
+				alert('List of all users: '+socketIO.rooms[pagePath]);
+			});
+			return moreCircle;
+	   	}
+    })
+    
+</script>
 <script type="text/javascript">
 	const minSideNavWidth = 200; // Minimum width (Match obsidian's min-width)
 	const toggleButton = document.querySelector(".sidebar-toggle-button");
@@ -72264,28 +75132,6 @@ class PageScriptElement {
 	const source_view = document.querySelector("div.markdown-source-view");
 	const reading_view = document.querySelector("div.markdown-reading-view");
 	let updatedText = document.querySelector("div.cm-content");
-    const pagePath = getFilePath();
-    const socketIO = io();
-    socketIO.emit('join', pagePath);
-    
-    function getFilePath() {
-        const currentUrl = window.location.href;
-		console.log(currentUrl);
-        let pagePath = '';
-        const pageParents = document.querySelector("div.view-header-title-container");
-        const pageTitle = document.querySelector("div.view-header-title-container div.view-header-title");
-        const breadcrumbs = pageParents.getElementsByClassName('view-header-breadcrumb');
-        for (let i = 0; i < breadcrumbs.length; i++) {
-            if (breadcrumbs[i].innerText === '') {continue;}
-            pagePath += breadcrumbs[i].innerText;
-            if (i < breadcrumbs.length) {
-            	pagePath += '/';
-            }
-        }
-        pagePath += pageTitle.innerText+'.md';
-        console.log(pagePath);
-        return pagePath;
-    }
     
 	function changeEditorMode() {
         let is_invisible = source_view.getAttribute('style');
@@ -72295,7 +75141,6 @@ class PageScriptElement {
             switch_button.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svg-icon lucide-book-open"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>';
         	source_view.setAttribute('style', 'width: 100%; height: 100%;');
         	reading_view.setAttribute('style', 'display: none;');
-            const parsed = JSON.stringify({ type: 'update', url: '${file?.path}', text: updatedText});
         } else {
             switch_button.title = 'reading';
             switch_button.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svg-icon lucide-edit-3"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>';
@@ -72303,19 +75148,8 @@ class PageScriptElement {
         	source_view.setAttribute('style', 'display: none;');
         }
 	}
-    
-    function saveText() {
-    	updatedText = document.querySelector("div.cm-content").innerText;
-    	// const data = {
-        //     type: 'update',
-        // 	url: '${file?.path}',
-       	// 	text: updatedText
-    	// };
-        // console.log(data);
-    	// socket.send(JSON.stringify(data));
-	}
 	
-	document.addEventListener("DOMContentLoaded", function () {
+	document.addEventListener("DOMContentLoaded", function () {     
         toggleButton.addEventListener('click', function () {
             let startNavWidth = 250;
             document.querySelector('div.workspace')?.classList.toggle('is-left-sidedock-open');
@@ -72350,137 +75184,222 @@ class PageScriptElement {
         		draggableHr.parentElement.style.width = newWidth + "px";
             }
         }
-		
-		socketIO.on('updatedUserList', (curUser, newPage, fileSubscriptions) => {
-			console.log('---- UPDATEDUSERLIST ----');
-            console.log(fileSubscriptions);
-            console.log(fileSubscriptions[pagePath]);
-            updateActiveUsersOnPageUI(fileSubscriptions[pagePath]);
-            updateNavigationUsersUI(fileSubscriptions);
-		});
-        
-        const activeUsersContainer = document.getElementsByClassName("workspace-user-list").item(0);
-		function updateActiveUsersOnPageUI(users) {
-			activeUsersContainer.innerHTML = ''; // Clear the previous content
-			
-			const maxDisplayUsers = 4;
-		   	
-			for (let i = 0; i < Math.min(users.length, maxDisplayUsers); i++) {
-				const userCircle = createUserCircle(users[i], false);
-				activeUsersContainer.appendChild(userCircle);
-			}
-		   	
-			if (users.length > maxDisplayUsers) {
-				const moreCircle = createMoreCircle(users.length - maxDisplayUsers);
-				activeUsersContainer.appendChild(moreCircle);
-			}
-			console.log(activeUsersContainer);
-		}
-        
-        function updateNavigationUsersUI(fileSubscriptions) {
-            document.querySelectorAll('div.nav-file-users[data-path$=".md"]').forEach((file) => file.innerHTML = '');
-            for (const filePath in fileSubscriptions) {
-                console.log("key: "+filePath);
-                console.log(fileSubscriptions[filePath]);
-                const navFile = document.querySelector('div.nav-file-users[data-path="'+filePath+'"]');
-                console.log(navFile);
-                navFile.innerHTML = '';
-                console.log("Looping over users");
-                for (let i = 0; i < fileSubscriptions[filePath].length; i++) {
-                    const user = fileSubscriptions[filePath][i];
-                    const userCircle = createUserCircle(user, true);
-                    navFile.appendChild(userCircle);
-                    console.log(user);
-                }
-			}
-        }
-	   
-		function createUserCircle(user, isFileNav) {
-			const userItemContainer = document.createElement('div');
-			const userCircle = document.createElement('div');
-			const userSVG = '<svg width="25px" height="25px" viewBox="0 0 24.00 24.00" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="var(--interactive-accent)" stroke-width="0.00024000000000000003"><g id="SVGRepo_bgCarrier" stroke-width="0" transform="translate(2.040000000000001,2.040000000000001), scale(0.83)"><rect x="0" y="0" width="24.00" height="24.00" rx="12" fill="#ffffff" strokewidth="0"></rect></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round" stroke="#CCCCCC" stroke-width="0.43200000000000005"></g><g id="SVGRepo_iconCarrier"> <path opacity="0.5" d="M22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12Z" fill="var(--interactive-accent)"></path> <path d="M16.807 19.0112C15.4398 19.9504 13.7841 20.5 12 20.5C10.2159 20.5 8.56023 19.9503 7.193 19.0111C6.58915 18.5963 6.33109 17.8062 6.68219 17.1632C7.41001 15.8302 8.90973 15 12 15C15.0903 15 16.59 15.8303 17.3178 17.1632C17.6689 17.8062 17.4108 18.5964 16.807 19.0112Z" fill="var(--interactive-accent)"></path> <path d="M12 12C13.6569 12 15 10.6569 15 9C15 7.34315 13.6569 6 12 6C10.3432 6 9.00004 7.34315 9.00004 9C9.00004 10.6569 10.3432 12 12 12Z" fill="var(--interactive-accent)"></path> </g></svg>';
-		    
-			userCircle.setAttribute('class', 'user-circle');
-			userCircle.style.position = 'relative';
-			userCircle.style.display = 'inline flex';
-			userCircle.style.borderRadius = '50%';
-			userCircle.style.border = '2px solid';
-		    
-			userItemContainer.title = user.username;
-            console.log('=========');
-            console.log(user);
-            console.log(userItemContainer.title);
-            userItemContainer.style.display = 'flex';
-            userItemContainer.style.cursor = 'pointer';
-            if (!isFileNav) {
-            	userItemContainer.style.justifyContent = 'center';
-            }
-			userItemContainer.appendChild(userCircle);
-		   	
-			userCircle.innerHTML = userSVG;
-			userCircle.style.color = user.userColor;
-		   	
-			return userItemContainer;
-		}
-        
-	   	function createMoreCircle(count) {
-		   	const moreCircle = document.createElement('div');
-			moreCircle.className = 'moreCircle';
-			moreCircle.textContent = '+'+count.toString();
-			moreCircle.title = 'Click to view more users';
-			moreCircle.addEventListener('click', () => {
-				// Implement logic to show a modal or expand the user list
-				alert('List of all users: '+socketIO.rooms[pagePath]);
-			});
-			return moreCircle;
-	   	}
     });
 </script>`;
     }
 }
 
-const contentResolver = async (path, referer, plugin, extraVars = []) => {
-    if (path == INTERNAL_CSS_ENPOINT) {
+const contentResolver = async (fpath, referer, plugin, markdownRenderer, extraVars = []) => {
+    if (fpath == INTERNAL_CSS_ENPOINT) {
         const fullCssText = Array.from(document.styleSheets)
             .flatMap((styleSheet) => Array.from(styleSheet.cssRules).map((cssRule) => cssRule.cssText))
-            .join('\n') +
-            `\n.markdown-preview-view, .markdown-embed-content {height: unset !important;}`;
+            .join('\n') + `\n.markdown-preview-view, .markdown-embed-content {height: unset !important;}`;
         return {
             contentType: 'text/css',
             payload: fullCssText,
+            doc: '',
         };
     }
-    if (path == INTERNAL_LOGIN_ENPOINT) {
+    if (fpath == INTERNAL_LOGIN_ENPOINT) {
         let nonce = extraVars[1].varValue;
         let loginForm = '';
         if (plugin.settings.useAuthentication == Auth.None) {
-            loginForm = new LoginForm(plugin, path, referer, nonce).usernameLogin();
+            loginForm = new LoginForm(plugin, fpath, referer, nonce).usernameLogin();
         }
         else {
-            loginForm = new LoginForm(plugin, path, referer, nonce).retrieveHtml();
+            loginForm = new LoginForm(plugin, fpath, referer, nonce).retrieveHtml();
         }
         return {
             contentType: 'text/css',
             payload: loginForm,
+            doc: '',
         };
     }
-    const file = plugin.app.metadataCache.getFirstLinkpathDest(path, referer);
+    const file = plugin.app.metadataCache.getFirstLinkpathDest(fpath, referer);
     if (!file)
         return null;
-    const payload = await plugin.app.vault.readBinary(file);
     if (file.extension === 'md') {
+        const markdown = await file.vault.read(file);
         const navigationDefault = { order: SortOrder.Descending, type: SortType.FileName };
-        const page = new Page(plugin, Buffer.from(payload), path, referer, navigationDefault);
+        const page = new Page(plugin, markdownRenderer, file, navigationDefault);
+        const renderedMarkdown = await page.retrieveHTML(markdown);
         return {
             contentType: 'text/html',
-            payload: page.retrieveHTML(),
+            payload: renderedMarkdown,
+            doc: markdown,
         };
     }
+    const payload = await plugin.app.vault.readBinary(file);
     return {
         contentType: mime$5.lookup(file.extension) || 'text',
-        payload: Buffer.from(payload)
+        payload: Buffer.from(payload),
+        doc: payload,
     };
 };
+
+class CustomMarkdownRenderer {
+}
+
+class Utils {
+    static async delay(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+    static async changeViewMode(view, modeName) {
+        const mode = view.modes[modeName];
+        mode && await view.setMode(mode);
+    }
+    static async waitUntil(condition, timeout = 1000, interval = 100) {
+        return new Promise((resolve, reject) => {
+            let timer = 0;
+            let intervalId = setInterval(() => {
+                if (condition()) {
+                    clearInterval(intervalId);
+                    resolve(true);
+                }
+                else {
+                    timer += interval;
+                    if (timer >= timeout) {
+                        clearInterval(intervalId);
+                        resolve(false);
+                    }
+                }
+            }, interval);
+        });
+    }
+}
+
+class ObsidianMarkdownRenderer extends CustomMarkdownRenderer {
+    plugin;
+    app;
+    rootElement;
+    constructor(plugin, app) {
+        super();
+        this.plugin = plugin;
+        this.app = app;
+        this.patchObsidianMarkdownRenderer();
+        this.rootElement = this.getOrCreateRootDomElement();
+    }
+    patchObsidianMarkdownRenderer() {
+        const originalQueueRenderFn = obsidian.MarkdownPreviewRenderer.prototype.queueRender;
+        const alteredQueueRenderFn = function () {
+            this.rendered || (this.rendered = []);
+            const e = this.queued;
+            const t = !this.parsing;
+            if (e && t && !e.high) {
+                e.cancel();
+                const timeOut = setTimeout(this.onRender.bind(this), 0);
+                this.queued = {
+                    high: true,
+                    cancel: () => clearTimeout(timeOut)
+                };
+            }
+            else {
+                const n = t ? 0 : 200;
+                const timeOut = setTimeout(this.onRender.bind(this), n);
+                this.queued = {
+                    high: !n,
+                    cancel: () => clearTimeout(timeOut)
+                };
+            }
+        };
+        obsidian.MarkdownPreviewRenderer.prototype.queueRender = alteredQueueRenderFn;
+        this.plugin.register(() => {
+            obsidian.MarkdownPreviewRenderer.prototype.queueRender = originalQueueRenderFn;
+        });
+    }
+    getOrCreateRootDomElement() {
+        const maybe = document.querySelector(`body .html-server-rendering-element`);
+        if (!maybe) {
+            const rootEl = document.body.createEl('div');
+            rootEl.addClass('html-server-rendering-element');
+            return rootEl;
+        }
+        return maybe;
+    }
+    async renderHtmlFromMarkdown(markdown, file, viewMode) {
+        const leaf = new obsidian.WorkspaceLeaf(this.app);
+        const el = this.rootElement.createDiv();
+        leaf.containerEl = el;
+        const view = new obsidian.MarkdownView(leaf);
+        leaf.view = view;
+        let renderedContent;
+        if (viewMode === 'source') {
+            renderedContent = document.createElement('div');
+            let curEditor = new obsidian.MarkdownView(leaf).editor;
+            curEditor.setValue(markdown);
+            const tempContent = curEditor.containerEl;
+            const html_content = tempContent.querySelectorAll('div[class$="cm-active"]');
+            html_content.forEach((divElement) => {
+                divElement.classList.remove('cm-active');
+            });
+            renderedContent.appendChild(tempContent);
+        }
+        else if (viewMode === 'preview') {
+            let n = 0;
+            view.currentMode = new obsidian.MarkdownPreviewView(leaf.view);
+            view.currentMode.type = viewMode;
+            view.getViewType();
+            let contentPromise = new Promise((resolve, _reject) => {
+                view.currentMode.onRenderComplete = () => {
+                    if (view.currentMode.renderer.queued) {
+                        return;
+                    }
+                    if (!n++) {
+                        const callouts = view.currentMode.renderer.previewEl.querySelectorAll(`.callout-icon svg`);
+                        callouts.forEach((el) => {
+                            el.parentElement?.removeChild(el);
+                        });
+                        view.currentMode.renderer.sections.forEach((section) => {
+                            const promises = [];
+                            view.currentMode.renderer.owner.postProcess(section, promises, view.currentMode.renderer.frontmatter);
+                            if (promises.length) {
+                                view.currentMode.renderer.asyncSections.push(section);
+                                Promise.all(promises).then(function () {
+                                    view.currentMode.renderer.asyncSections.remove(section),
+                                        section.resetCompute(),
+                                        view.currentMode.renderer.queueRender();
+                                });
+                            }
+                        });
+                        view.currentMode.renderer.onRender();
+                        return;
+                    }
+                    this.postProcess(view.currentMode.renderer.previewEl);
+                    const html = view.currentMode.renderer.previewEl;
+                    leaf.detach();
+                    this.rootElement.removeChild(el);
+                    resolve(html);
+                };
+            });
+            view.currentMode.renderer.set(markdown);
+            renderedContent = (await contentPromise);
+            let success = await Utils.waitUntil(() => renderedContent != undefined, 2000, 10);
+            if (!success || !renderedContent)
+                return document.createElement('div');
+        }
+        else {
+            renderedContent = document.createElement('div');
+        }
+        return renderedContent;
+    }
+    postProcess(el) {
+        const links = el.querySelectorAll('a.internal-link');
+        links.forEach((link) => { link.target = ''; });
+        const embeds = el.querySelectorAll('span.internal-embed.markdown-embed.inline-embed');
+        embeds.forEach((embed) => {
+            if (embed.parentElement && embed.parentElement.parentElement) {
+                embed.parentElement.parentElement.style.position = 'relative';
+            }
+        });
+        const imagesContainers = el.querySelectorAll('.internal-embed.media-embed.image-embed');
+        imagesContainers.forEach((imageContainer) => {
+            const src = imageContainer.getAttribute('src') || '';
+            const imageElement = imageContainer.querySelector('img');
+            if (imageElement)
+                imageElement.src = src;
+        });
+    }
+}
 
 function generateUserId() {
     return require$$0$4.randomBytes(16).toString('base64');
@@ -72488,23 +75407,46 @@ function generateUserId() {
 function generateUserColor() {
     return '#' + (0x1000000 + Math.random() * 0xffffff).toString(16).substr(1, 6);
 }
-function mapToObject(map) {
-    const obj = {};
-    map.forEach((value, key) => {
-        obj[key] = value;
-    });
-    return obj;
-}
-class ServerController {
-    plugin;
-    app;
-    server;
-    io;
-    fileSubscriptions = new Map();
-    clients = new Map();
+class ServerInfo {
+    fileSubscriptions;
+    clients;
+    constructor() {
+        this.fileSubscriptions = new Map();
+        this.clients = new Map();
+    }
+    getFileSubs() {
+        return this.fileSubscriptions;
+    }
+    hasFilePath(filePath) {
+        return this.fileSubscriptions.has(filePath);
+    }
+    getPage(filePath) {
+        return this.fileSubscriptions.get(filePath);
+    }
+    isSubscribed(filePath, curUser) {
+        this.fileSubscriptions.get(filePath).activeUsers.forEach((activeUser) => {
+            if (activeUser?.userId === curUser?.userId) {
+                return true;
+            }
+        });
+        return false;
+    }
+    assignUserValue(filePath, reqUser, callback) {
+        if (this.fileSubscriptions.get(filePath)) {
+            const activeUsers = this.fileSubscriptions.get(filePath)?.activeUsers;
+            if (activeUsers) {
+                activeUsers.forEach((curUser) => {
+                    if (curUser.userId === reqUser.userId) {
+                        console.log('FOUND USER');
+                        callback(curUser);
+                    }
+                });
+            }
+        }
+    }
     detectUser(newUser) {
         this.fileSubscriptions.forEach((users, filepath) => {
-            users.forEach((activeUser) => {
+            users.activeUsers.forEach((activeUser) => {
                 if (activeUser.userId === newUser.userId) {
                     return activeUser;
                 }
@@ -72512,6 +75454,104 @@ class ServerController {
         });
         return undefined;
     }
+    generateNewUser(username, password) {
+        let newUser = { userId: generateUserId(), username: username, password: password,
+            userColor: generateUserColor(), socketId: '', userCursor: { line: 1, ch: 0 } };
+        while (this.detectUser(newUser)) {
+            newUser.userId = generateUserId();
+        }
+        return newUser;
+    }
+    exportToPageInfo() {
+        const obj = {};
+        this.fileSubscriptions.forEach((value, key) => {
+            obj[key] = value.activeUsers;
+        });
+        return obj;
+    }
+    subscribeToFile(socket, curUser, filepath, doc) {
+        if (!this.hasFilePath(filepath)) {
+            this.fileSubscriptions.set(filepath, new PageInfo(doc));
+        }
+        if (!this.isSubscribed(filepath, curUser)) {
+            if (!this.clients.get(curUser.userId)) {
+                socket.join(filepath);
+                this.clients.set(curUser.userId, filepath);
+                this.fileSubscriptions.get(filepath).activeUsers.push(curUser);
+                return true;
+            }
+            else if (this.clients.get(curUser.userId) != filepath) {
+                this.unsubscribeFromFile(socket, curUser, this.clients.get(curUser.userId));
+                socket.join(filepath);
+                this.clients.set(curUser.userId, filepath);
+                this.fileSubscriptions.get(filepath).activeUsers.push(curUser);
+                return true;
+            }
+        }
+        return false;
+    }
+    unsubscribeFromFile(socket, user, filepath) {
+        const subscriptions = this.fileSubscriptions.get(filepath).activeUsers;
+        if (subscriptions) {
+            for (const curUser of subscriptions) {
+                if (curUser.userId === user.userId) {
+                    this.fileSubscriptions.get(filepath)?.activeUsers.remove(curUser);
+                    this.clients.delete(curUser.userId);
+                    socket.leave(filepath);
+                    break;
+                }
+            }
+            if (subscriptions.length === 0) {
+                this.fileSubscriptions.delete(filepath);
+            }
+        }
+    }
+}
+
+/**
+Rebase and deduplicate an array of client-submitted updates that
+came in with an out-of-date version number. `over` should hold the
+updates that were accepted since the given version (or at least
+their change descs and client IDs). Will return an array of
+updates that, firstly, has updates that were already accepted
+filtered out, and secondly, has been moved over the other changes
+so that they apply to the current document version.
+*/
+function rebaseUpdates(updates, over) {
+    if (!over.length || !updates.length)
+        return updates;
+    let changes = null, skip = 0;
+    for (let update of over) {
+        let other = skip < updates.length ? updates[skip] : null;
+        if (other && other.clientID == update.clientID) {
+            if (changes)
+                changes = changes.mapDesc(other.changes, true);
+            skip++;
+        }
+        else {
+            changes = changes ? changes.composeDesc(update.changes) : update.changes;
+        }
+    }
+    if (skip)
+        updates = updates.slice(skip);
+    return !changes ? updates : updates.map(update => {
+        let updateChanges = update.changes.map(changes);
+        changes = changes.mapDesc(update.changes, true);
+        return {
+            changes: updateChanges,
+            effects: update.effects && StateEffect.mapEffects(update.effects, changes),
+            clientID: update.clientID
+        };
+    });
+}
+
+class ServerController {
+    plugin;
+    app;
+    server;
+    io;
+    markdownRenderer;
+    serverInfo = new ServerInfo();
     sessionMiddleware = expressSession({
         secret: require$$0$4.randomBytes(16).toString('base64'),
         resave: false,
@@ -72523,18 +75563,12 @@ class ServerController {
         this.app.use(this.sessionMiddleware);
         this.app.use(libExports$1.initialize());
         this.app.use(libExports$1.session());
-        libExports$1.serializeUser(function (user, done) {
-            done(null, user);
-        });
-        libExports$1.deserializeUser(function (user, done) {
-            done(null, user);
-        });
+        libExports$1.serializeUser(function (user, done) { done(null, user); });
+        libExports$1.deserializeUser(function (user, done) { done(null, user); });
+        this.markdownRenderer = new ObsidianMarkdownRenderer(plugin, plugin.app);
         libExports$1.use(new libExports.Strategy((username, password, done) => {
-            let newUser = { userId: generateUserId(), username: username, userColor: generateUserColor() };
+            let newUser = this.serverInfo.generateNewUser(username, password);
             if (plugin.settings.useAuthentication == Auth.None) {
-                while (this.detectUser(newUser)) {
-                    newUser.userId = generateUserId();
-                }
                 done(null, newUser);
                 return;
             }
@@ -72549,7 +75583,8 @@ class ServerController {
         }));
         this.app.use(express$1.urlencoded());
         this.app.post('/login', libExports$1.authenticate('local', {}), (req, res) => {
-            res.redirect(req.body.redirectUrl || '/');
+            let indexpath = '';
+            res.redirect(req.body.redirectUrl || '/' + indexpath);
         });
         this.app.use('/', this.authenticate, async (req, res) => {
             let path = decodeURI(req.path);
@@ -72577,12 +75612,14 @@ class ServerController {
                 res.end();
                 return;
             }
-            this.handleIOSocketServer(resolvedPath, req);
-            const r = await contentResolver(path, resolveFromPath, this.plugin, []);
+            const r = await contentResolver(path, resolveFromPath, this.plugin, this.markdownRenderer);
             if (!r) {
                 res.status(404).write(`Error reading file at path '${req.path}'`);
                 res.end();
                 return;
+            }
+            if (r.contentType == 'text/html') {
+                this.handleIOSocketServer(resolvedPath, req, r.doc.toString());
             }
             res.contentType(r.contentType);
             res.write(r.payload);
@@ -72639,94 +75676,102 @@ class ServerController {
         const nonce = require$$0$4.randomBytes(32).toString('base64');
         res.contentType('text/html; charset=UTF-8');
         res.setHeader('Content-Security-Policy', `script-src 'nonce-${nonce}'`);
-        const content = await contentResolver(INTERNAL_LOGIN_ENPOINT, '/', this.plugin, [
+        const content = await contentResolver(INTERNAL_LOGIN_ENPOINT, '/', this.plugin, this.markdownRenderer, [
             { varName: 'REDIRECT_URL', varValue: req.url, },
             { varName: 'NONCE', varValue: nonce, },
         ]);
         res.send(content?.payload);
     };
-    handleIOSocketServer(resolvedPath, req) {
+    handleIOSocketServer(fpath, req, doc) {
         this.io?.once("connection", (socket) => {
-            console.log(`New connection to ${resolvedPath}`);
+            console.log(`New connection to ${fpath}`);
             socket.once('join', (pageTitle) => {
-                this.handleSocketClient(socket, 'join', req.user, pageTitle);
-                return;
+                this.handleSocketClient(this.io, socket, 'join', req.user, pageTitle, doc);
             });
             socket.once('disconnect', (pageTitle) => {
-                this.handleSocketClient(socket, 'disconnect', req.user, pageTitle);
-                return;
+                this.handleSocketClient(this.io, socket, 'disconnect', req.user, pageTitle, '');
             });
-            socket.on('textUpdate', (userId, filePath, updatedTextContent) => {
+            socket.once('getDocument', (filePath) => {
+                let curDoc = this.serverInfo.getPage(filePath).doc;
+                let serverVersion = this.serverInfo.getPage(filePath).updates;
+                socket.to(filePath).emit('getDocument', serverVersion, curDoc);
+            });
+            socket.once('textUpdate', (filePath, version, updatedTextContent) => {
+                console.log('TextUpdate');
                 this.plugin.app.vault.adapter.write(filePath, updatedTextContent);
-                return;
+                socket.to(filePath).emit('contentUpdated', updatedTextContent);
+            });
+            socket.once('pullUpdates', (filePath, clientVersion) => {
+                const requestPage = this.serverInfo.getPage(filePath);
+                const serverUpdates = requestPage.updates;
+                const serverVersion = serverUpdates.length;
+                if (serverVersion > clientVersion) {
+                    console.log('Server sending new updates');
+                    socket.to(filePath).emit('pulledUpdates', serverVersion, serverUpdates);
+                }
+                else {
+                    console.log('No new updates to send');
+                    socket.to(filePath).emit('pulledUpdates', serverVersion, []);
+                }
+            });
+            socket.on('pushUpdates', (filePath, version, updatedTextContent) => {
+                let curPage = this.serverInfo.getPage(filePath);
+                let curUpdates = curPage.updates;
+                let curDoc = curPage.doc;
+                let curVersion = curUpdates.length;
+                let received = updatedTextContent.map((json) => ({
+                    clientID: json.clientID,
+                    changes: ChangeSet.fromJSON(json.changes)
+                }));
+                if (version != updatedTextContent.length) {
+                    received = rebaseUpdates(received, updatedTextContent.slice(version));
+                }
+                console.log('Pushing new Updates');
+                for (let update of received) {
+                    curDoc = update.changes.apply(curDoc);
+                }
+                if (curUpdates.length > 0) {
+                    console.log(curUpdates);
+                    console.log(curVersion);
+                    console.log('Current Doc');
+                    console.log(curDoc);
+                }
+                socket.emit('pushedUpdates', curVersion, curUpdates);
+            });
+            socket.on('cursorMove', (filePath, cursorPos) => {
+                if (req.user) {
+                    if (this.serverInfo.hasFilePath(filePath)) {
+                        this.serverInfo.assignUserValue(filePath, req.user, (user) => user.userCursor = cursorPos);
+                    }
+                    const pageUsers = this.serverInfo.exportToPageInfo()[filePath];
+                    socket.to(filePath).emit('cursorUpdate', req.user, pageUsers);
+                }
             });
         });
-        console.log("=== FileSubscriptions ===");
-        console.log(this.fileSubscriptions);
     }
-    handleSocketClient(socket, event, user, filepath) {
+    handleSocketClient(io, socket, event, user, filepath, doc) {
         if (!user)
             return;
+        if (!io)
+            return;
+        if (user.socketId === '') {
+            console.log(`ASSIGNING ${user.username} TO SOCKET ID: ${socket.id}`);
+            user.socketId = socket.id;
+        }
         if (filepath && filepath != '/' && filepath.endsWith('.md')) {
             if (event === 'join') {
-                console.log(`on 'join', resolvedPath:`);
-                console.log(filepath);
-                this.subscribeToFile(socket, user, filepath);
+                console.log(`on 'join', resolvedPath: ${filepath}`);
+                this.serverInfo.subscribeToFile(socket, user, filepath, doc);
+                let curPage = this.serverInfo.getPage(filepath);
+                socket.emit('RenderEditor', user, curPage.updates.length, curPage.doc);
             }
             else if (event === 'disconnect') {
                 console.log(`on 'disconnect', resolvedPath:`);
                 console.log(filepath);
-                this.unsubscribeFromFile(socket, user, filepath);
+                this.serverInfo.unsubscribeFromFile(socket, user, filepath);
             }
-            this.io?.emit('updatedUserList', user, filepath, mapToObject(this.fileSubscriptions));
-        }
-    }
-    subscribeToFile(socket, curUser, filepath) {
-        if (!this.fileSubscriptions.has(filepath)) {
-            this.fileSubscriptions.set(filepath, new Array());
-        }
-        let isSubscribed = false;
-        let activeUsers = this.fileSubscriptions.get(filepath);
-        activeUsers.forEach((activeUser) => {
-            if (activeUser?.userId === curUser?.userId) {
-                console.log(`Comparing ${activeUser.userId} and ${curUser.userId}`);
-                console.log(`${activeUser.username} already Subscribed to ${filepath}`);
-                isSubscribed = true;
-            }
-        });
-        if (!isSubscribed) {
-            console.log(curUser);
-            console.log(this.clients.get(curUser.userId));
-            if (!this.clients.get(curUser.userId)) {
-                console.log(`socket joined ${filepath}!`);
-                socket.join(filepath);
-                this.clients.set(curUser.userId, filepath);
-                this.fileSubscriptions.get(filepath)?.push(curUser);
-            }
-            else if (this.clients.get(curUser.userId) != filepath) {
-                console.log(`Moving ${curUser.username} from '${this.clients.get(curUser.userId)}' to '${filepath}'`);
-                this.unsubscribeFromFile(socket, curUser, this.clients.get(curUser.userId));
-                socket.join(filepath);
-                this.clients.set(curUser.userId, filepath);
-                this.fileSubscriptions.get(filepath)?.push(curUser);
-            }
-        }
-    }
-    unsubscribeFromFile(socket, user, filepath) {
-        const subscriptions = this.fileSubscriptions.get(filepath);
-        if (subscriptions) {
-            for (const curUser of subscriptions) {
-                if (curUser.userId === user.userId) {
-                    this.fileSubscriptions.get(filepath)?.remove(curUser);
-                    console.log(`socket leaving ${filepath}!`);
-                    this.clients.delete(curUser.userId);
-                    socket.leave(filepath);
-                    break;
-                }
-            }
-            if (subscriptions.length === 0) {
-                this.fileSubscriptions.delete(filepath);
-            }
+            let curVersion = this.serverInfo.getPage(filepath).updates.length;
+            this.io?.emit('updatedUserList', user, filepath, this.serverInfo.exportToPageInfo(), curVersion);
         }
     }
 }

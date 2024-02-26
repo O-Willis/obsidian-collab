@@ -1,19 +1,19 @@
 {
   "main": {
-    "id": "2a38fb12b49b93e6",
+    "id": "d1570774e11e41b5",
     "type": "split",
     "children": [
       {
-        "id": "339c76cb5650f263",
+        "id": "998ae36b330acc10",
         "type": "tabs",
         "children": [
           {
-            "id": "3ea58abb7cda85a9",
+            "id": "67c1148bc884e2aa",
             "type": "leaf",
             "state": {
               "type": "markdown",
               "state": {
-                "file": "file1.md",
+                "file": "Callouts.md",
                 "mode": "source",
                 "source": false
               }
@@ -25,15 +25,15 @@
     "direction": "vertical"
   },
   "left": {
-    "id": "dd4ea36834f3324e",
+    "id": "98ce1fa9cd5d0924",
     "type": "split",
     "children": [
       {
-        "id": "602f05486a929cf4",
+        "id": "4583f3510be25a94",
         "type": "tabs",
         "children": [
           {
-            "id": "f4977b271d0557a7",
+            "id": "bd44c84c3be32de3",
             "type": "leaf",
             "state": {
               "type": "file-explorer",
@@ -43,7 +43,7 @@
             }
           },
           {
-            "id": "8087d464b921d2c3",
+            "id": "9d6a370694464532",
             "type": "leaf",
             "state": {
               "type": "search",
@@ -58,7 +58,7 @@
             }
           },
           {
-            "id": "811eb3bd148f1e34",
+            "id": "730f34b23a861627",
             "type": "leaf",
             "state": {
               "type": "bookmarks",
@@ -69,24 +69,24 @@
       }
     ],
     "direction": "horizontal",
-    "width": 293.5,
+    "width": 200,
     "collapsed": true
   },
   "right": {
-    "id": "7dcd8d2e2ed45ffd",
+    "id": "15cfa5ff21234dc6",
     "type": "split",
     "children": [
       {
-        "id": "124c123f34f73f16",
+        "id": "fdee3621f2c11138",
         "type": "tabs",
         "children": [
           {
-            "id": "969f9d32cd6778c7",
+            "id": "186e407bb552873b",
             "type": "leaf",
             "state": {
               "type": "backlink",
               "state": {
-                "file": "file1.md",
+                "file": "Callouts.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -98,19 +98,19 @@
             }
           },
           {
-            "id": "d80bdaa126a6bae9",
+            "id": "7bb458ca2d4b3245",
             "type": "leaf",
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "file1.md",
+                "file": "Callouts.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               }
             }
           },
           {
-            "id": "c2704f750170496a",
+            "id": "6bab4e1401404a3d",
             "type": "leaf",
             "state": {
               "type": "tag",
@@ -121,17 +121,16 @@
             }
           },
           {
-            "id": "99a503d69894005e",
+            "id": "df50af77d7a8a20b",
             "type": "leaf",
             "state": {
               "type": "outline",
               "state": {
-                "file": "file1.md"
+                "file": "Callouts.md"
               }
             }
           }
-        ],
-        "currentTab": 3
+        ]
       }
     ],
     "direction": "horizontal",
@@ -150,55 +149,32 @@
       "collab:Turn the Http Server Off": false
     }
   },
-  "active": "3ea58abb7cda85a9",
+  "active": "67c1148bc884e2aa",
   "lastOpenFiles": [
-    "Export/callouts.md",
-    "file1.md",
-    "Export/html/index-page.html",
-    "Export/file1.md",
-    "Welcome.md",
     "Test File.md",
-    "html_templates/navigation.html",
-    "Callouts.md",
-    "html/Index.md",
-    "Pasted_image_2.png",
-    "img.png",
-    "x/y/z_2/Test.md",
-    "x/y/z_2/Pasted image 1.png",
-    "x/y/z_2/resolve file test.md",
-    "x/y/z_2/Pasted image 20231122200402.png",
-    "x/y/z_2/file resolver test.md",
-    "x/y/z_2",
-    "x/y/z_1/Test.md",
-    "x/y/z_1",
-    "x/y/b/Test.md",
-    "x/y/b/Pasted image 20231122200402.png",
-    "x/y/b/file resolver test.md",
-    "x/y/a/Test.md",
-    "x/y/b",
-    "x/y/a",
-    "x/y",
-    "x",
-    "z/y/b/Test.md",
-    "z/y/b/file resolver test.md",
-    "z/y/b/Pasted image 20231122200402.png",
-    "z/y/a/Test.md",
-    "z/y/b",
-    "z/y/a",
-    "z/is/b/Test.md",
-    "z/is/b/Pasted image 20231122200402.png",
-    "z/is/b/file resolver test.md",
-    "z/is/a/Test.md",
-    "first/is/b/Pasted image 20231122200402.png",
-    "first/is/b/Test.md",
-    "first/is/b/file resolver test.md",
-    "first/is/a/Test.md",
+    "Welcome.md",
+    "Organizer.md",
     "tests_folder/First Renderer Test.md",
-    "tests_folder/Simple Renderer Test.md",
-    "test.canvas",
-    "this/is/b/Test.md",
-    "this/is/b/Pasted image 20231122200402.png",
-    "Export/this/is/b/pasted-image-20231122200402.png",
-    "Export/test.canvas"
+    "file1.md",
+    "Callouts.md",
+    "Pasted_image_2.png",
+    "Obsidian Plugins/Pixi.md",
+    "html/Index.md",
+    "CodeMirror/Obsidian's Use.md",
+    "CodeMirror/Test.md",
+    "CodeMirror/Decorations/Folding.md",
+    "CodeMirror/Decorations/Adding Widgets.md",
+    "CodeMirror/Decorations",
+    "Obsidian Plugins/Vim.md",
+    "Obsidian Plugins/Turndown.md",
+    "CodeMirror/Obsidian Plugins/Untitled",
+    "Obsidian Plugins",
+    "tests_folder/main_scripts.html",
+    "CodeMirror/Tutorial & Notes/Lucide Arrows.md",
+    "CodeMirror/Tutorial & Notes/Typescript setup.md",
+    "CodeMirror/Tutorial & Notes",
+    "CodeMirror/StateView",
+    "CodeMirror/EditorView",
+    "CodeMirror"
   ]
 }

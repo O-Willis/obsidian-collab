@@ -91,7 +91,7 @@ export class CollabSettingsTab extends PluginSettingTab {
 				});
 			});
 
-		this.display_favicon(containerEl);
+		this.addFaviconSettings(containerEl);
 
 		const portSetting = new Setting(containerEl)
 			.setName('Listening port.')
@@ -213,21 +213,65 @@ export class CollabSettingsTab extends PluginSettingTab {
 		options_hr.style.opacity = "0.5";
 	}
 
-	display_favicon(containerEl: HTMLElement) {
+	addFaviconSettings(containerEl: HTMLElement) {
 		const faviconDisplay = new DocumentFragment();
-		const faviconDesc = faviconDisplay.createDiv()
-		faviconDesc.setText(`Favicon Preview:`);
+		const faviconDesc = faviconDisplay.createDiv();
+		faviconDesc.setText(`Set a custom favicon for the server.`);
 		faviconDesc.style.marginBottom = '10px';
 		const favicon = faviconDisplay.createEl('img',
 			{ attr: {['height']: `60`, ['width']: '60', ['src']: `${this.plugin.settings.faviconLink}`}});
 		favicon.style.marginLeft = '10px';
 		faviconDisplay.appendChild(favicon);
 
-		new Setting(containerEl)
+		const faviconSetting = new Setting(containerEl)
 			.setName('Server Favicon')
 			.setTooltip(`Default 'http://obsidian.md/favicon.ico'`)
-			.setDesc(faviconDisplay)
-			.addButton((cb) => {
+			.setDesc(faviconDisplay);
+		faviconSetting.addButton((cb) => {
+			const input = createEl("input", {  // FIXME!!!!!
+				attr: {
+					type: "file",
+					name: "image",
+					accept: '.png, .ico, .jpeg, .svg',
+					multiple: false,
+					style: 'display: none;'
+				}
+			});
+			input.onchange = async (value) => {
+				console.log(value);
+
+				const {files} = input;
+				if (!files || files.length) return;
+
+				const image = files[0];
+				// console.log(image);
+
+				const reader = new FileReader();
+				reader.onloadend = async (evt) => {
+					const image = new Image();
+					console.log(image);
+					image.onload = async () => {
+						try {
+							image.src = evt.target?.result?.toString() || '';
+							this.plugin.settings.faviconLink = image.src;
+							console.log(image.src);
+							await this.saveAndReload();
+							// this.display();
+						} catch (e) {
+							new Notice("There was an error parsing the image.");
+							console.log(e);
+						}
+					}
+				};
+				const tempVal = value as unknown;
+				reader.readAsDataURL(tempVal as Blob);
+			}
+			cb.setButtonText('Choose');
+			cb.buttonEl.appendChild(input);
+			cb.onClick(() => input.click())
+		});
+		if (this.plugin.settings.faviconLink != DEFAULT_SETTINGS.faviconLink) {
+			faviconSetting.addButton((cb) => {
 				cb.setIcon('lucide-rotate-ccw');
 				cb.setTooltip('Restore to Default Favicon');
 				cb.onClick(async () => {
@@ -235,48 +279,7 @@ export class CollabSettingsTab extends PluginSettingTab {
 					await this.saveAndReload();
 				});
 			});
-			// .addButton((cb) => {  FIXME
-			// 	const input = createEl("input", {
-			// 		attr: {
-			// 			type: "file",
-			// 			name: "image",
-			// 			accept: '.png, .ico, .jpeg, .svg',
-			// 			multiple: false,
-			// 			style: 'display: none;'
-			// 		}
-			// 	});
-			// 	input.onchange = async (value) => {
-			// 		console.log(value);
-			//
-			// 		const { files } = input;
-			// 		if (!files || files.length) return;
-			//
-			// 		const image = files[0];
-			// 		// console.log(image);
-			//
-			// 		const reader = new FileReader();
-			// 		reader.onloadend = async (evt) => {
-			// 			const image = new Image();
-			// 			console.log(image);
-			// 			image.onload = async () => {
-			// 				try {
-			// 					image.src = evt.target?.result?.toString() || '';
-			// 					this.plugin.settings.faviconLink = image.src;
-			// 					console.log(image.src);
-			// 					await this.saveAndReload();
-			// 					// this.display();
-			// 				} catch (e) {
-			// 					new Notice("There was an error parsing the image.");
-			// 					console.log(e);
-			// 				}
-			// 			}
-			// 		};
-			// 		reader.readAsDataURL(value);
-			// 	}
-			// 	cb.setButtonText('Choose');
-			// 	cb.buttonEl.appendChild(input);
-			// 	cb.onClick(() => input.click())
-			// });
+		}
 	}
 
 	add_host_settings(containerEl: HTMLElement) {

@@ -31,3 +31,136 @@
 	width: 100%;
 	justify-content: center;
 }
+
+/*=================  REMOVE STYES SECTION  ==================*/
+.is-hidden-frameless:not(.is-fullscreen) .workspace-tabs.mod-top-right-space .workspace-tab-header-container {
+	padding-right: 0;
+}
+
+.is-hidden-frameless:not(.is-fullscreen):not(.mod-macos) .workspace-tabs.mod-top-right-space .workspace-tab-header-container::after {
+	content: inherit;
+}
+
+/*==================  USERS  ==================*/
+.user-container {
+	display: flex;
+	cursor: pointer;
+	&:not(.nav-user) {
+		justify-content: center;
+	}
+}
+
+.user-circle {
+	position: relative;
+	border-radius: 50%;
+	display: inline-flex;
+	border: 2px solid;
+}
+
+/*==================  WORKSPACE TAB BAR  ==================*/
+
+.workspace-tab-header-container {
+	align-items: center;
+	padding-right: 10px;
+}
+
+.workspace-user-list {
+	margin-right: var(--size-4-1);
+	display: flex;
+}
+
+.workspace-user-list > :not(:first-child) {
+	margin-left: 5px;
+}
+
+.workspace-tab-header-tab-user-container {
+	width: 60px;
+	height: 20px;
+	display: flex;
+	border-left: 2px solid #9b9b9b;
+	align-items: center;
+	justify-content: center;
+	margin-left: 10px;
+}
+
+/* =======================  MODAL DESIGN  ======================= */
+/* div#warningModal div.modal-close-button::before {
+	color: white;
+} */
+
+div#warningModal div.modal-close-button::before {
+	&:hover {
+		 color: #dab561;
+ 	}
+}
+
+/* ===========================================
+   ============  CLOUD ANIMATION  ============
+   =========================================== */
+.cloud-container {
+	animation: none;
+	border-width: 0;
+	margin: 40px auto;
+	align-items: center;
+}
+
+.cloud_float, cloud_float_3 {
+	height: 60px; width: 60px;
+	right: 25px; top: 30px;
+	animation: move 6s ease infinite;
+	transform: scale(0.95);
+	@include border-radius(50%);
+	position: relative;
+	background: var(--interactive-accent);
+	border-radius: 50%;
+	box-shadow:
+		var(--interactive-accent) 65px -15px 0 -5px,
+		var(--interactive-accent) 25px -25px,
+		var(--interactive-accent) 30px 10px,
+		var(--interactive-accent) 60px 15px 0 -10px,
+		var(--interactive-accent) 85px 5px 0 -5px;
+}
+
+.cloud_float_2 {
+	scale: 60%;
+	height: 60px; width: 60px;
+	left: 40px; bottom: 20px;
+	animation: move 6s ease infinite;
+	transform: scale(0.95);
+	@include border-radius(50%);
+	position: relative;
+	background: var(--color-accent-1);
+	border-radius: 50%;
+	box-shadow:
+		var(--color-accent-1) 65px -15px 0 -5px,
+		var(--color-accent-1) 25px -25px,
+		var(--color-accent-1) 30px 10px,
+		var(--color-accent-1) 60px 15px 0 -10px,
+		var(--color-accent-1) 85px 5px 0 -5px;
+}
+
+.cloud_float_3 {
+	scale: 40%;
+	height: 60px; width: 60px;
+	right: 60px; bottom: 70px;
+	animation: move_2 6s ease infinite;
+	transform: scale(0.95);
+	@include border-radius(50%);
+	position: relative;
+	background: var(--color-accent-1);
+	border-radius: 50%;
+	box-shadow:
+		var(--color-accent-1) 65px -15px 0 -5px,
+		var(--color-accent-1) 20px -25px,
+		var(--color-accent-1) 30px 10px,
+		var(--color-accent-1) 60px 15px 0 -10px,
+		var(--color-accent-1) 85px 5px 0 -5px;
+}
+
+@keyframes move{
+	50% { transform: translateY(-40px);}
+}
+
+@keyframes move_2{
+	50% { transform: translateY(-80px);}
+}

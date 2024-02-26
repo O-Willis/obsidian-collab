@@ -1,6 +1,6 @@
 import { CollabSettings} from "../settings/settings";
-import { EventRef } from "obsidian";
-export { App, PluginSettingTab, Setting, Plugin} from 'obsidian';
+import {EventRef } from "obsidian";
+export { App, PluginSettingTab, Setting, MarkdownPreviewRenderer, MarkdownView, WorkspaceLeaf, Plugin} from 'obsidian';
 
 declare module 'obsidian' {
 	interface App {
@@ -20,4 +20,52 @@ declare module 'obsidian' {
 			callback: (settings: PluginSettingTab) => void
 		): EventRef;
 	}
+
+	interface WorkspaceItem {
+		containerEl: Element;
+	}
+
+	type MarkdownViewModeTypes = 'source' | 'preview' | 'edit';
+
+	interface MarkdownSubView {
+		type: MarkdownViewModeTypes;
+		renderer: MarkdownPreviewRenderer;
+		onRenderComplete: () => void;
+	}
+
+	interface MarkdownPreviewRenderer {
+		queued?: { high: boolean; cancel: () => void };
+		previewEl: Element;
+		queueRender: () => void;
+		set: (markdown: string) => void;
+		rendered?: unknown[];
+		parsing: boolean;
+		onRender: () => void;
+		__proto__: MarkdownPreviewRenderer;
+	}
+
+	// Hypothetical interfaces for other renderer types, assuming specific methods/properties for demonstration
+	// interface MarkdownSourceRenderer {
+	// 	// Specific properties or methods for source view renderer
+	// 	queued?: { high: boolean; cancel: () => void };
+	// 	previewEl: Element;
+	// 	queueRender: () => void;
+	// 	set: (markdown: string) => void;
+	// 	rendered?: unknown[];
+	// 	parsing: boolean;
+	// 	onRender: () => void;
+	// 	__proto__: MarkdownSourceRenderer;
+	// }
+
+	// interface MarkdownEditRenderer {
+	// 	// Specific properties or methods for edit view renderer
+	// 	queued?: { high: boolean; cancel: () => void };
+	// 	previewEl: Element;
+	// 	queueRender: () => void;
+	// 	set: (markdown: string) => void;
+	// 	rendered?: unknown[];
+	// 	parsing: boolean;
+	// 	onRender: () => void;
+	// 	__proto__: MarkdownEditRenderer;
+	// }
 }

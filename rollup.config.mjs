@@ -7,6 +7,12 @@ import terser from '@rollup/plugin-terser';
 
 const name = 'collab';
 
+const sharedPlugins = [
+	json(),
+	nodeResolve({ preferBuiltins: true }),
+	cjs({ include: 'node_modules/**' }),
+];
+
 const developmentConfig = {
 	input: 'src/main.ts',
 	external: ['obsidian'],
@@ -18,9 +24,7 @@ const developmentConfig = {
 		name,
 	},
 	plugins: [
-		json(),
-		nodeResolve({ preferBuiltins: true }),
-		cjs({ include: 'node_modules/**' }),
+		...sharedPlugins,
 		typescript({ tsconfig: './tsconfig.dev.json' }),
 		copy({
 			targets: [
@@ -49,9 +53,7 @@ const productionConfig = {
 		name,
 	},
 	plugins: [
-		json(),
-		nodeResolve({ preferBuiltins: true }),
-		cjs({ include: 'node_modules/**' }),
+		...sharedPlugins,
 		typescript({ tsconfig: './tsconfig.dev.json' }),
 		copy({
 			targets: [
@@ -69,6 +71,20 @@ const productionConfig = {
 	],
 };
 
-const config =
-	process.env.PRODUCTION === '1' ? productionConfig : developmentConfig;
+// const editorConfig = {
+// 	input: "./editor.mjs",
+// 	output: {
+// 		file: "src/editor.bundle.js",
+// 		sourcemap: false,
+// 		format: "iife",
+// 		name,
+// 	},
+// 	plugins: [
+// 		cjs({ include: 'node_modules/**' }),
+// 		nodeResolve({ preferBuiltins: true }),
+// 	]
+// }
+
+const config = process.env.PRODUCTION === '1' ? productionConfig : developmentConfig;
+// export default [config, editorConfig];
 export default config;

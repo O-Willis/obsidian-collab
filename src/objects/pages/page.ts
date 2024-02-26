@@ -1,8 +1,24 @@
 import CollabPlugin from "../../main";
-import {App, MarkdownRenderer, TAbstractFile, TFile, Workspace} from "obsidian";
-import {right} from "@popperjs/core";
-import {FileSorter, Navigation, NavigationOrder} from "./navigationResolver";
-import {CollabUser} from "../../server/controller";
+import {Editor, EditorPosition, MarkdownRenderer, MarkdownView, TFile, Workspace} from "obsidian";
+import {Navigation, NavigationOrder} from "./navigationResolver";
+import {CustomMarkdownRenderer} from "../../utils/renderer_tools/customMarkdownRenderer";
+import {WorkspaceLeaf} from "../types";
+import {CollabUser} from "../serverInfo";
+import {Update} from "@codemirror/collab";
+import {Text} from "@codemirror/state";
+
+export class PageInfo {
+	updates: Update[]; // List of updates (holding a change set-and a client ID)
+	activeUsers: CollabUser[];
+	// The current document
+	doc: Text;
+
+	constructor(doc_text: string) {
+		this.updates = new Array<Update>;
+		this.activeUsers = new Array<CollabUser>();
+		this.doc = Text.of(doc_text.split("\n"));
+	}
+}
 
 export class Page {
 	private head: PageHead;
@@ -15,15 +31,14 @@ export class Page {
 	public source: TFile | null;
 	private curWidth: number;
 
-	constructor(private plugin: CollabPlugin, content: Buffer, path: string, referer: string, navigationOrder: NavigationOrder) {
+	constructor(private plugin: CollabPlugin, markdownRenderer: CustomMarkdownRenderer, source: TFile, navigationOrder: NavigationOrder) {
 		const vault = plugin.app.vault;
-		this.source = plugin.app.metadataCache.getFirstLinkpathDest(path, referer);
+		this.source = source;
 		this.navigation = new Navigation(plugin.app, navigationOrder);
-		this.head = new PageHead(vault.getName(), plugin.settings.faviconLink, '/.obsidian/plugins/obsidian-collab/app.css')
-		this.body = new PageBody(plugin, plugin.app.workspace, content, navigationOrder);
+		this.head = new PageHead(vault.getName(), plugin.settings.faviconLink, '/.obsidian/plugins/obsidian-collab/app.css', '/.obsidian/plugins/obsidian-collab/scripts.js', '/.obsidian/plugins/obsidian-collab/editor.bundle.js');
+		this.body = new PageBody(plugin, plugin.app.workspace, markdownRenderer, navigationOrder);
 		this.scripts = new PageScriptElement(plugin);
 		this.curWidth = 250;
-		// this.nonce = nonce;
 		if (!this.source) return;
 		this.document = document.implementation.createHTMLDocument(this.source.basename);
 	}
@@ -72,8 +87,11 @@ export class Page {
 		return this;
 	}
 
-	retrieveHTML() {
-		return `<!DOCTYPE html><html lang="en">${this.head.retrieveHead()}${this.body.retrieveBodyHtml(this.plugin, false, this.createLeftNavBar(), this.createPageHeader(), this.createTitleContainer(this.source as TFile))}${this.scripts.retirevePageScripts(this.source)}`;
+	async retrieveHTML(markdown: string) {
+		const headContainer = this.head.retrieveHead();
+		const bodyContainer = await this.body.retrieveBodyHtml(this.plugin, false, this.createLeftNavBar(), this.createPageHeader(), this.createTitleContainer(this.source as TFile), markdown, this.source as TFile);
+		const scriptContainer = this.scripts.retirevePageScripts(this.source, markdown);
+		return `<!DOCTYPE html><html lang="en">${headContainer}${bodyContainer}${scriptContainer}`;
 	}
 
 	private generateWebpageLayout(content: HTMLElement): {container: HTMLElement, left: HTMLElement, right: HTMLElement, center: HTMLElement} {
@@ -392,16 +410,18 @@ export class Page {
 
 		let HeaderContainer = this.document.createElement("div");
 		let HeaderSpacer = this.document.createElement("div");
+		let CurrentUser = this.document.createElement("div");
 		let ActiveUsers = this.document.createElement("div");
 		let ToggleButton = this.document.createElement("div");
 		let ClickableIcon = this.document.createElement("div");
 
 		HeaderContainer.setAttribute("class", "workspace-tab-header-container");
-		HeaderContainer.setAttribute('style', 'padding-right: 10px');
+		// HeaderContainer.setAttribute('style', 'padding-right: 10px'); TODO HERE
 		HeaderSpacer.setAttribute("class", "workspace-tab-header-spacer");
-		ActiveUsers.setAttribute("class", "workspace-tab-header-tab-list workspace-user-list");
+		CurrentUser.setAttribute('class', 'workspace-tab-header-tab-user-container');
+		ActiveUsers.setAttribute("class", "workspace-user-list");
 
-		ToggleButton.setAttribute("class", "mod-right");
+		ToggleButton.setAttribute("class", "sidebar-toggle-button mod-right");
 		ToggleButton.ariaLabel = "";
 		ToggleButton.setAttribute('style', 'display: flex; justify-content: center; app-region: no-drag; cursor: pointer');
 		ToggleButton.setAttribute("data-tooltip-position", "left");
@@ -409,7 +429,9 @@ export class Page {
 
 		HeaderContainer.appendChild(HeaderSpacer);
 		HeaderContainer.appendChild(ActiveUsers);
-		ActiveUsers.style.gap = '3px';
+		HeaderContainer.appendChild(CurrentUser);
+		// CurrentUser.setAttribute('style', '');
+		// ActiveUsers.style.gap = '3px';
 
 		HeaderContainer.appendChild(ToggleButton);
 		ToggleButton.appendChild(ClickableIcon);
@@ -464,21 +486,119 @@ export class PageHead {
 	title: string;
 	favicon: string;
 	css: string;
+	js: string;
+	editorjs: string;
 
-	constructor(title: string, favicon: string, css: string) {
+	constructor(title: string, favicon: string, css: string, js: string, editorjs: string) {
 		this.title = title;
 		this.favicon = favicon;
 		this.css = css;
+		this.js = js;
+		this.editorjs = js;
 	}
 
 	retrieveHead() {
 		return `<head>
 	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge" />
 	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 	<title>${this.title}</title>
 	<link rel="shortcut icon" href="${this.favicon}">
-	<link href="${this.css}" type="text/css" rel="stylesheet">
 	<script src="https://cdn.socket.io/4.7.4/socket.io.min.js" integrity="sha384-Gr6Lu2Ajx28mzwyVR8CFkULdCU7kMlZ9UthllibdOSo6qAiN+yXNHqtgdTvFXMT4" crossorigin="anonymous"></script>
+	
+	<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+	
+	<script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+	
+<!--	<script src="https://cdn.jsdelivr.net/npm/jquery-caret@1.3.7/jquery.caret.min.js"></script>-->
+	
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror/lib/codemirror.css">
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror/addon/fold/foldgutter.css">
+	
+	<script src="https://cdn.jsdelivr.net/npm/codemirror/lib/codemirror.js"></script>
+	
+	<script src="https://cdn.jsdelivr.net/npm/codemirror/keymap/vim.min.js"></script>
+	
+	<script src="https://cdn.jsdelivr.net/npm/codemirror/addon/fold/indent-fold.min.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/codemirror/addon/edit/continuelist.min.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/codemirror/addon/selection/active-line.min.js"></script>
+	
+	<script type="importmap">
+		{
+		"imports": {
+    			"@uiw/codemirror-extensions-basic-setup": "https://cdn.jsdelivr.net/npm/@uiw/codemirror-extensions-basic-setup@4.21.21/+esm",
+				"@codemirror/state": "https://cdn.jsdelivr.net/npm/@codemirror/state@6.4.0/+esm",
+    			"@codemirror/view": "https://cdn.jsdelivr.net/npm/@codemirror/view@6.23.1/+esm",
+    			"@codemirror/language": "https://cdn.jsdelivr.net/npm/@codemirror/language@6.10.1/+esm",
+    			"@codemirror/search": "https://cdn.jsdelivr.net/npm/@codemirror/search@6.5.6/+esm",
+    			"@codemirror/collab": "https://cdn.jsdelivr.net/npm/@codemirror/collab@6.1.1/+esm"
+			}
+		}
+	</script>
+<!--	<script type="module" src="https://cdn.jsdelivr.net/npm/@codemirror/state@6.4.0/dist/index.min.js"></script>-->
+<!--	<script type="module" src="https://cdn.jsdelivr.net/npm/@codemirror/lang-javascript@6.2.1/dist/index.min.js"></script>-->
+<!--	<script type="module" src="https://cdn.jsdelivr.net/npm/@codemirror/collab@6.1.1/dist/index.min.js"></script>-->
+<!--	<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/addon/fold/indent-fold.min.js" integrity="sha512-Q6g5qQfa6ko+Y+0BwAciUAq01qxgfScTPFP2Fsrr+zIrTe5Yq3tN5xaA919MmBs/1RMz/jyctknYavjc3k+/xg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>-->
+<!--	<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/addon/edit/continuelist.min.js" integrity="sha512-eAuQaBSvlaYxR3d+ow+tm+393cV1VanYI4j7GWHEpjuKhxaIUPbHzADL6qxJa0/7ECIKcQzPxat9o6rvIyGxhA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>-->
+<!--	<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/addon/selection/active-line.min.js" integrity="sha512-0sDhEPgX5DsfNcL5ty4kP6tR8H2vPkn40GwA0RYTshkbksURAlsRVnG4ECPPBQh7ZYU6S3rGvp5uhlGQUNrcmA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>-->
+<!--	<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/addon/scroll/scrollpastend.min.js" integrity="sha512-D8WvWYfmRQwXla2tt9juJPMe5ED2le0e3vzZ4s9BGF9Ioqrfw8/tja6R8pHjXfxFxGf7dqonLpLtP7sVJlUSvQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>-->
+	
+	<script src="https://cdn.jsdelivr.net/npm/codemirror/addon/search/searchcursor.min.js"></script>
+<!--	<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/addon/search/searchcursor.min.js" integrity="sha512-+ZfZDC9gi1y9Xoxi9UUsSp+5k+AcFE0TRNjI0pfaAHQ7VZTaaoEpBZp9q9OvHdSomOze/7s5w27rcsYpT6xU6g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>-->
+	
+	<script src="https://cdn.jsdelivr.net/npm/codemirror/addon/fold/foldcode.js"></script>
+	<!-- Below is important for MD folding -->
+	<script src="https://cdn.jsdelivr.net/npm/codemirror/addon/fold/foldgutter.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/codemirror/addon/fold/markdown-fold.js"></script>
+	
+	<script src="https://cdn.jsdelivr.net/npm/codemirror/addon/mode/overlay.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/codemirror/mode/meta.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/codemirror/mode/markdown/markdown.js"></script>
+	
+	<script src="https://cdn.jsdelivr.net/npm/codemirror/mode/xml/xml.js"></script>
+	<!-- for embedded HTML -->
+	<script src="https://cdn.jsdelivr.net/npm/codemirror/mode/stex/stex.js"></script>
+	<!-- for Math TeX Formular -->
+	<script src="https://cdn.jsdelivr.net/npm/codemirror/mode/yaml/yaml.js"></script>
+	<!-- for Front Matters -->
+	
+	<script src="https://cdn.jsdelivr.net/npm/codemirror/mode/javascript/javascript.js"></script>
+	<!-- load more for code blocks -->
+	
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/hypermd/mode/hypermd.css" type="text/css">
+<!--	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/hypermd/theme/hypermd-light.css" type="text/css">-->
+<!--	<script type="text/x-mathjax-config">-->
+<!--		MathJax.Hub.Config({-->
+<!--        	jax: ["input/TeX", "output/HTML-CSS","output/NativeMML","output/SVG"],-->
+<!--        	extensions: ["MathMenu.js","MathZoom.js", "AssistiveMML.js", "a11y/accessibility-menu.js"],-->
+<!--        	TeX: {-->
+<!--            	extensions: ["AMSmath.js","AMSsymbols.js","noErrors.js","noUndefined.js"]-->
+<!--        	}-->
+<!--    	});-->
+<!--  	</script>-->
+	<script src="https://cdn.jsdelivr.net/npm/mathjax/MathJax.js"></script>
+<!--	<script src="https://cdn.jsdelivr.net/npm/powerpack/fold-math-with-mathjax.js"></script>-->
+	
+	<!-- marked and powerpack/hover-with-marked -->
+	<script src="https://cdn.jsdelivr.net/npm/marked/lib/marked.js"></script>
+<!--	<script src="https://cdn.jsdelivr.net/npm/powerpack/hover-with-marked.js"></script>-->
+	
+	<script src="https://cdn.jsdelivr.net/npm/turndown/dist/turndown.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/turndown-plugin-gfm/dist/turndown-plugin-gfm.js"></script>
+<!--	<script src="https://cdn.jsdelivr.net/npm/powerpack/paste-with-turndown.js"></script>-->
+
+	<script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+<!--	<script src="https://cdn.jsdelivr.net/npm/requirejs/require.js"></script>-->
+	<script src="https://cdn.jsdelivr.net/npm/hypermd/ai1.js"></script>
+	<!-- <script src="https://cdn.jsdelivr.net/npm/hypermd/everything.js"></script>-->
+<!--	<script src="https://cdn.jsdelivr.net/npm/hypermd/mode/hypermd.js"></script>-->
+<!--	<script src="https://cdn.jsdelivr.net/npm/hypermd/goods/patch-requirejs.js"></script>-->
+<!--	<style>-->
+<!--		.workspace-tab-header-tab-list > :not(:first-child) {-->
+<!--			margin-left: 5px;-->
+<!--		}-->
+<!--	</style>-->
+	<link href="${this.css}" type="text/css" rel="stylesheet">
 </head>`;
 	}
 }
@@ -486,20 +606,20 @@ export class PageHead {
 export class PageBody {
 	private workspaceRibbon: HTMLElement | null;
 	private navMenu: Navigation;
-	private markdown: Buffer;
+	private markdownRenderer: CustomMarkdownRenderer;
 	private workspaceModRoot: string;
 	private modRightSplit: string;
 
-	constructor(plugin: CollabPlugin, private workspace: Workspace, content: Buffer, navigationOrder: NavigationOrder) {
+	constructor(plugin: CollabPlugin, private workspace: Workspace, markdownRenderer: CustomMarkdownRenderer, navigationOrder: NavigationOrder) {
 		// console.log(workspace.leftRibbon);
 		this.workspaceRibbon = workspace.containerEl.querySelector(`div.workspace-ribbon.side-dock-ribbon.mod-left`);
 		this.navMenu = new Navigation(plugin.app, navigationOrder);
-		this.markdown = content;
+		this.markdownRenderer = markdownRenderer;
 		this.workspaceModRoot = ``;
 		this.modRightSplit = ``;
 	}
 
-	retrieveBodyHtml(plugin: CollabPlugin, useTitlebar: boolean, leftSideDock: HTMLDivElement, pageHeader: HTMLDivElement, titleContainer: HTMLDivElement) {
+	async retrieveBodyHtml(plugin: CollabPlugin, useTitlebar: boolean, leftSideDock: HTMLDivElement, pageHeader: HTMLDivElement, titleContainer: HTMLDivElement, markdown: string, source: TFile) {
 		var tempDivElement = document.createElement('div');
 		var tempPageHeader = document.createElement('div');
 		var tempTitleContainer = document.createElement('div');
@@ -507,7 +627,34 @@ export class PageBody {
 		tempPageHeader.appendChild(pageHeader);
 		tempTitleContainer.appendChild(titleContainer)
 		let theme = `${document.body.classList.contains('theme-dark')? 'theme-dark' : 'theme-light'}`;
-		let classString = `mod-windows is-frameless is-maximized is-hidden-frameless obsidian-app show-inline-title show-view-header`;
+		let modeOnStart = 'preview';
+		let isLivePreview = true;
+		let showInlineTitle = false;
+		let classString = `mod-windows is-frameless is-maximized is-hidden-frameless obsidian-app ${(showInlineTitle)? 'show-inline-title': ''} show-view-header`;
+
+		var el = document.createElement('div');
+		//@ts-ignore
+		const leaf = new WorkspaceLeaf(plugin.app);
+		leaf.containerEl = el;
+		leaf.view = new MarkdownView(leaf);
+		let curEditor = new MarkdownView(leaf).editor.getDoc();
+		curEditor.setValue(markdown);
+		// console.log('GET VALUE');
+		// console.log(curEditor);
+		// console.log(`${curEditor}`);
+		// console.log('.getLine(0)');
+		// console.log(curEditor.getLine(0));
+		// curEditor.setValue(markdown);
+		// console.log(curEditor.getLine(0));
+
+		let initializedMarkdown = await this.markdownRenderer.renderHtmlFromMarkdown(markdown, source, 'preview');
+		let sourceMarkdown = await this.markdownRenderer.renderHtmlFromMarkdown(markdown, source, 'source');
+
+		// await MarkdownRenderer.render(plugin.app, markdown, el, plugin.app.vault.getResourcePath(source), plugin);
+		// let sourceMarkdown = el as Element;
+
+
+
 		return `<body class="${theme} ${classString}" style="--zoom-factor:1; --font-text-size:16px;">
 	${(useTitlebar)? this.retrieveTitlebar(): ''}
 	<div class="app-container">
@@ -524,7 +671,8 @@ export class PageBody {
 						${tempPageHeader.innerHTML}
 						<div class="workspace-tab-container">
 							<div class="workspace-leaf">
-								<div class="workspace-leaf-content" data-type="markdown" data-mode="preview">
+								<hr class="workspace-leaf-resize-handle">
+								<div class="workspace-leaf-content" data-type="markdown" data-mode="${modeOnStart}">
 									<div class="view-header">
 										${tempTitleContainer.innerHTML}
 										<div class="view-actions">
@@ -549,33 +697,8 @@ export class PageBody {
 										</div>
 									</div>
 									<div class="view-content">
-										<div class="markdown-source-view cm-s-obsidian mod-cm6 is-live-preview is-folding show-properties node-insert-event" style="display: none;">
-											<div aria-live="polite" style="position: fixed; top: -10000px;"></div>
-											<div tabindex="-1" class="cm-scroller">
-												<div class="cm-sizer">
-													<div class="inline-title" contenteditable="true" spellcheck="true" autocapitalize="on" tabindex="-1" enterkeyhint="done">file1</div>
-													<div class="metadata-container" tabindex="-1" data-property-count="0"><div class="metadata-properties-heading" tabindex="0"><div class="collapse-indicator collapse-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svg-icon right-triangle"><path d="M3 8L12 17L21 8"></path></svg></div><div class="metadata-properties-title">Properties</div></div><div class="metadata-content"><div class="metadata-properties"></div><div class="metadata-add-button text-icon-button" tabindex="0"><span class="text-button-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svg-icon lucide-plus"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg></span><span class="text-button-label">Add property</span></div></div></div>
-													<div class="cm-contentContainer">
-														<div oninput="saveText()" spellcheck="true" autocorrect="on" autocapitalize="on" translate="no" contenteditable="true" class="cm-content cm-lineWrapping" role="textbox" aria-multiline="true" data-language="hypermd" style="width: 100%;">
-															${this.markdown}
-														</div>
-													</div>
-													<div class="embedded-backlinks" style="display: none;"></div>
-												</div>
-											</div>
-										</div>
-										<div class="markdown-reading-view" style="width: 100%; height: 100%;">
-											<div class="markdown-preview-view markdown-rendered node-insert-event is-readable-line-width allow-fold-headings show-indentation-guide allow-fold-lists" tabindex="-1" style="tab-size: 4; height: 100% !important;">
-												<div class="markdown-preview-sizer markdown-preview-section" style="min-height: calc(100% - var(--file-margins));">
-													<div class="markdown-preview-pusher" style="width: 1px; height: 0.1px; margin-bottom: 0px;"></div>
-													<div class="mod-header"></div>
-													${this.markdown}
-													<div class="mod-footer">
-														<div class="embedded-backlinks" style="display: none;"></div>
-													</div>
-												</div>
-											</div>
-										</div>
+										${this.retrieveEditorContent(isLivePreview)}
+										${this.retrievePreviewMode(initializedMarkdown)}
 									</div>
 								</div>
 							</div>
@@ -643,22 +766,381 @@ export class PageBody {
 	</div>
 </div>`;
 	}
+
+	retrievePreviewMode(previewContainer: Element) {
+		return `<div class="markdown-reading-view" style="width: 100%; height: 100%;">
+	<div class="markdown-preview-view markdown-rendered node-insert-event is-readable-line-width allow-fold-headings show-indentation-guide allow-fold-lists" tabindex="-1" style="tab-size: 4; height: 100% !important;">
+		<div class="markdown-preview-sizer markdown-preview-section" style="min-height: calc(100% - var(--file-margins));">
+			<div class="markdown-preview-pusher" style="width: 1px; height: 0.1px; margin-bottom: 0px;"></div>
+			<div class="mod-header"></div>
+			${(previewContainer as HTMLElement).innerHTML}
+			<div class="mod-footer">
+				<div class="embedded-backlinks" style="display: none;"></div>
+			</div>
+		</div>
+	</div>
+</div>`;
+	}
+
+	retrieveEditorContent(isLivePreview: boolean) {
+		return `<div class="markdown-source-view cm-s-obsidian mod-cm6 is-live-preview is-folding show-properties node-insert-event ${(isLivePreview)? 'is-live-preview': ''}" style="display: none;"></div>`;
+	}
 }
 
 export class PageScriptElement {
 	private scripts: string;
+	private plugin: CollabPlugin;
 
-	constructor(private plugin: CollabPlugin) {
-		// console.log(workspace.leftRibbon);
+	constructor(plugin: CollabPlugin) {
 		this.scripts = '';
+		this.plugin = plugin;
 	}
 
 	// TODO Note to self
 	// I'm thinking on the join event, I can just send the innerHTML contents of the header-tab-list, edit it and then send it back
 	// 	and reassign the innerHTML to whatever change happened
 
-	retirevePageScripts(file: TFile | null) {
+	retirevePageScripts(file: TFile | null, markdown: string) {
 		return `
+<script type="module">
+	import { EditorState, RangeSetBuilder, ChangeSet, StateField, StateEffect,EditorSelection } from "@codemirror/state";
+    import { Text } from "@codemirror/state";
+	import { EditorView, Decoration, ViewPlugin, ViewUpdate, WidgetType, showTooltip, drawSelection,keymap } from "@codemirror/view"; 
+    import {basicSetup, minimalSetup} from "@uiw/codemirror-extensions-basic-setup";
+    import { syntaxTree } from '@codemirror/language';
+    import { collab, receiveUpdates, sendableUpdates, rebaseUpdates, getSyncedVersion } from '@codemirror/collab';
+    
+    let initialDoc = \`${markdown}\`;
+    const curUserContainer = document.querySelector("div.workspace-tab-header-tab-user-container");
+    let currentUser = document.querySelector("div.current-user");
+    const pagePath = getFilePath();
+    const socketIO = io();
+    let editor = null;
+    
+    let cursorPositions = new Map();
+    let decorations = Decoration.none;
+    
+    function getFilePath() {
+        const currentUrl = window.location.href;
+		console.log(currentUrl);
+        let pagepath = '';
+        const pageParents = document.querySelector("div.view-header-title-container");
+        const pageTitle = document.querySelector("div.view-header-title-container div.view-header-title");
+        const breadcrumbs = Array.from(pageParents.getElementsByClassName('view-header-breadcrumb'));
+        pagepath = breadcrumbs.map(function(span) {if (span.innerText !== '') {return span.innerText}}).join('/');
+        pagepath += ((pagepath !== '')? '/':'')+pageTitle.innerText+'.md';
+        console.log(pagepath);
+        return pagepath;
+    }
+    
+    function getCursorTooltips(state) {
+    	return state.selection.ranges.filter(range => range.empty).map(range => {
+            let text = currentUser?.title;
+            return {
+                pos: range.head, // makes a small offset to put the hover over the cursor
+                above: true,
+        		strictSide: true,
+        		arrow: false,
+        		create: () => {
+          			let dom = document.createElement("div");
+          			dom.className = "cm-tooltip-cursor";
+          			dom.title = currentUser?.title;
+       				dom.textContent = text;
+          			return { dom };
+        		}
+      		}
+    	})
+	}
+	
+	const cursorTooltipField = StateField.define({
+        create: getCursorTooltips,
+        update(tooltips, tr) {
+            if (!tr.docChanged && !tr.selection) return tooltips
+            return getCursorTooltips(tr.state)
+       	},
+       	// Look into hoverTooltip instead of using showTooltip
+  		provide: f => showTooltip.computeN([f], state => state.field(f))
+	});
+	
+	
+	// =====================  Collab Section  ======================
+	async function pushUpdates(version, fullUpdates) {
+		// Strip off transaction data
+		let curUpdates = fullUpdates.map(u => ({
+			clientID: u.clientID,
+			changes: u.changes.toJSON()
+		}));
+		// console.log(curUpdates);
+		return new Promise((resolve, reject) => {
+			// console.log('in promise for pushUpdates');
+			socketIO.emit("pushUpdates", pagePath, version, curUpdates);
+			socketIO.once("pushedUpdates", (latestVersion, updates) => {
+				console.log('getting updates back from pushUpdates');
+				resolve(updates);
+			});
+		});
+	}
+
+	async function pullUpdates(version) {
+		console.log('pullingUpdates with version: ', version);
+		
+		return new Promise((resolve, reject) => {
+			socketIO.emit("pullUpdates", pagePath, version);
+        	socketIO.on("pulledUpdates", (latestVersion, updates) => {
+				if (latestVersion > version) {
+					console.log('getting updates back from pullUpdates');
+					const curUpdates = updates.map(u => ({ changes: ChangeSet.fromJSON(u.changes), clientID: u.clientID }));
+					resolve(curUpdates);
+				} else {
+					console.log('No new updates');
+					resolve([]);
+				}
+        	});
+    	});
+    }
+	
+	function peerExtension(startVersion) {
+		let plugin = ViewPlugin.fromClass(
+	  		class {
+      			pushing = false
+      			done = false
+
+				constructor(view) {
+					this.view = view
+					this.pull()
+				}
+	
+				update(update) {
+					if (update.docChanged) {
+						this.push()
+					} else {
+						console.log('No change when calling update');
+					}
+				}
+	
+				async push() {
+					let updates = sendableUpdates(this.view.state);
+					if (this.pushing || !updates.length) return
+					this.pushing = true;
+					let version = getSyncedVersion(this.view.state);
+					console.log('pushUpdates is true...');
+					await pushUpdates(version, updates);
+					console.log('After await pushUpdates...');
+					this.pushing = false
+					// Regardless of whether the push failed or new updates came in
+					// while it was running, try again if there's updates remaining
+					if (sendableUpdates(this.view.state).length) setTimeout(() => this.push(), 100)
+				}
+		
+				async pull() {
+					while (!this.done) {
+						let version = getSyncedVersion(this.view.state)
+						let updates = await pullUpdates(version);
+						console.log('pulling updates...');
+						console.log(updates);
+						this.view.dispatch(receiveUpdates(this.view.state, updates))
+					}
+				}
+				destroy() { this.done = true }
+			}
+		)
+		return [collab({ startVersion }), plugin]
+	}
+	
+	// ================================================================
+    
+    function assignTooltipTheme(curUser) {
+    	return EditorView.baseTheme({
+			".cm-tooltip.cm-tooltip-cursor": {
+				backgroundColor: curUser.userColor,  // TODO add curUser div to get assigned color for current user
+				color: "white",
+				border: "none",
+				padding: "2px 7px",
+				borderRadius: "4px",
+				fontSize: "12px",
+				margin: "5px auto auto",
+				"& .cm-tooltip-arrow:before": {
+					borderTopColor: curUser.userColor,
+				},
+				"& .cm-tooltip-arrow:after": {
+					borderTopColor: "transparent"
+				}
+			},
+			"&.cm-focused .cm-cursor": {
+				borderLeftColor: curUser.userColor,
+				borderLeftWidth: "2px",
+			},
+		})
+    }
+    
+    function cursorTooltip(curUser) {return [cursorTooltipField, assignTooltipTheme(curUser)]}
+	
+	function getCursor(line, ch) {return {line: line.number, ch: ch};}
+    
+    function loadEditorStateAndView(curUser, version, curDoc) {
+    	currentUser = document.querySelector("div.current-user");
+    	console.log('Current version');
+    	console.log(version);
+    	console.log('Current doc');
+    	console.log(curDoc);
+    	console.log((version != null)? version : 1);
+    	const startState = EditorState.create({
+			doc: curDoc,
+			extensions: [
+				basicSetup({
+					allowMultipleSelections: false, // Will most likely try to find support for this later
+					lineNumbers: true,
+					foldGutter: true,
+					indentOnInput: true,
+					dropCursor: true,
+				}), 
+				drawSelection({cursorBlinkRate: 0}),
+				cursorTooltip(curUser),
+				peerExtension((version != null)? version:0),
+				//dynamicLineClassPlugin,
+				// externalCursorPlugin, externalCursorPositions,
+			],
+		});
+		if (editor) {return}
+		editor = new EditorView({
+			state: startState,
+			parent: document.querySelector('div.markdown-source-view'),
+			dispatch: (transaction => {
+				editor.update([transaction]);
+				// console.log(transaction);
+				// console.log('Did doc change?');
+				// console.log(transaction.docChanged);
+				// console.log('annotation');
+				// console.log(transaction.annotation);
+				if (transaction.docChanged) {
+					const updates = sendableUpdates(editor.state);
+					console.log(updates);
+					console.log('Reccent change');
+					console.log(updates[updates.length-1].changes);
+				}
+				// if (transaction.selection) {
+				// 	const cursorPos = editor.state.selection.main.head;
+				// 	const curLine = editor.state.doc.lineAt(cursorPos);
+				// 	const userCursor = getCursor(curLine, (cursorPos - curLine.from));
+				// 	// cursorPositions.set(, userCursor);
+				// 	socketIO.emit('cursorMove', pagePath, userCursor);
+				// }
+			}),
+		});
+    }
+	
+	document.addEventListener("DOMContentLoaded", function () {
+        const userListContainer = document.querySelector('div.workspace-user-list');
+        socketIO.emit('join', pagePath); // TODO data doesn't change so fix this later
+        
+        socketIO.on('RenderEditor', (curUser, version, curDoc) => {
+            console.log('Rending editor for ', curUser.username);
+            if (curUserContainer.innerHTML === '') {
+                curUserContainer.appendChild(createUserCircle(curUser, false, true));
+            }
+            console.log(curUserContainer);
+            loadEditorStateAndView(curUser, version, curDoc);
+        });
+        
+        // function convertToDocPosition(state, {line, ch}) {
+        // 	const lineInfo = state.doc.line(line);
+        // 	return lineInfo.from + ch;
+		// }
+        
+        socketIO.on('cursorUpdate', (curUser, cursorPositions) => {
+			console.log('Cursor position:');
+			console.log(cursorPositions);
+			
+			// Convert the recieved cursor position back to a Codemirror position
+			// const pos = convertToDocPosition(editor.state, cursorPosition);
+			//
+			// decorations = Decoration.set([cursorPosition]);
+			// updateCursorDecoration(curUser, cursorPositions);
+			// editor.dispatch({
+			// 	effects: StateEffect.appendConfig.of(decorations),
+			// });
+			
+			// editor.dispath({
+			// 	effects: StateEffect.appendConfig.of(
+			// 		Decoration.set([Decoration.widget({
+			// 			widget: new WidgetType(cursorElement),
+			// 			pos: pos.pos
+			// 		})])
+			// 	)
+			// });
+		});
+        
+        socketIO.on('updatedUserList', (curUser, newPage, fileSubscriptions) => {
+			console.log('---- UPDATEDUSERLIST ----');
+            console.log(fileSubscriptions);
+            console.log(fileSubscriptions[pagePath]);
+            updateActiveUsersOnPageUI(curUser, fileSubscriptions[pagePath]);
+            updateNavigationUsersUI(fileSubscriptions);
+            for (const user of fileSubscriptions[pagePath]) {  // create map of all users and default cursor positions
+            	if (!cursorPositions.get(user)) {
+            		cursorPositions.set(user, {line: 0, ch: 0});
+            	}
+            }
+		});
+        
+		function updateActiveUsersOnPageUI(curUser, users) {
+			userListContainer.innerHTML = ''; // Clear the previous content
+			
+			const maxDisplayUsers = 4;
+		   	
+			for (let i = 0; i < Math.min(users.length, maxDisplayUsers); i++) {
+				if (currentUser.title === users[i].username) {continue}
+				const userCircle = createUserCircle(users[i], false, false);
+				userListContainer.appendChild(userCircle);
+			}
+			if (users.length > maxDisplayUsers) {
+				const moreCircle = createMoreCircle(users.length - maxDisplayUsers);
+				userListContainer.appendChild(moreCircle);
+			}
+		}
+        
+        function updateNavigationUsersUI(fileSubscriptions) {
+            document.querySelectorAll('div.nav-file-users[data-path$=".md"]').forEach((file) => file.innerHTML = '');
+            for (const filePath in fileSubscriptions) {
+                const navFile = document.querySelector('div.nav-file-users[data-path="'+filePath+'"]');
+                navFile.innerHTML = '';
+                for (let i = 0; i < fileSubscriptions[filePath].length; i++) {
+                    const user = fileSubscriptions[filePath][i];
+                    const userCircle = createUserCircle(user, true, false);
+                    navFile.appendChild(userCircle);
+                }
+			}
+        }
+	   
+		function createUserCircle(user, isFileNav, isCurUser) {
+			const userContainer = document.createElement('div');
+			const userCircle = document.createElement('div');
+			const userSVG = '<svg width="25px" height="25px" viewBox="0 0 24.00 24.00" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="var(--interactive-accent)" stroke-width="0.00024000000000000003"><g id="SVGRepo_bgCarrier" stroke-width="0" transform="translate(2.040000000000001,2.040000000000001), scale(0.83)"><rect x="0" y="0" width="24.00" height="24.00" rx="12" fill="#ffffff" strokewidth="0"></rect></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round" stroke="#CCCCCC" stroke-width="0.43200000000000005"></g><g id="SVGRepo_iconCarrier"> <path opacity="0.5" d="M22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12Z" fill="var(--interactive-accent)"></path> <path d="M16.807 19.0112C15.4398 19.9504 13.7841 20.5 12 20.5C10.2159 20.5 8.56023 19.9503 7.193 19.0111C6.58915 18.5963 6.33109 17.8062 6.68219 17.1632C7.41001 15.8302 8.90973 15 12 15C15.0903 15 16.59 15.8303 17.3178 17.1632C17.6689 17.8062 17.4108 18.5964 16.807 19.0112Z" fill="var(--interactive-accent)"></path> <path d="M12 12C13.6569 12 15 10.6569 15 9C15 7.34315 13.6569 6 12 6C10.3432 6 9.00004 7.34315 9.00004 9C9.00004 10.6569 10.3432 12 12 12Z" fill="var(--interactive-accent)"></path> </g></svg>';
+		    
+            userContainer.className = 'user-container' + ((isCurUser)? ' current-user': '') + ((isFileNav)? ' nav-user': '');
+			userContainer.title = user.username;
+            
+			userCircle.className = 'user-circle';
+            userCircle.innerHTML = userSVG;
+			userCircle.style.color = user.userColor;
+			userContainer.appendChild(userCircle);
+			return userContainer;
+		}
+        
+	   	function createMoreCircle(count) { //TODO check if this renders!!!!
+		   	const moreCircle = document.createElement('div');
+			moreCircle.className = 'moreCircle';
+			moreCircle.textContent = '+'+count.toString();
+			moreCircle.title = 'Click to view more users';
+			moreCircle.addEventListener('click', () => {
+				// Implement logic to show a modal or expand the user list
+				alert('List of all users: '+socketIO.rooms[pagePath]);
+			});
+			return moreCircle;
+	   	}
+    })
+    
+</script>
 <script type="text/javascript">
 	const minSideNavWidth = 200; // Minimum width (Match obsidian's min-width)
 	const toggleButton = document.querySelector(".sidebar-toggle-button");
@@ -667,28 +1149,6 @@ export class PageScriptElement {
 	const source_view = document.querySelector("div.markdown-source-view");
 	const reading_view = document.querySelector("div.markdown-reading-view");
 	let updatedText = document.querySelector("div.cm-content");
-    const pagePath = getFilePath();
-    const socketIO = io();
-    socketIO.emit('join', pagePath);
-    
-    function getFilePath() {
-        const currentUrl = window.location.href;
-		console.log(currentUrl);
-        let pagePath = '';
-        const pageParents = document.querySelector("div.view-header-title-container");
-        const pageTitle = document.querySelector("div.view-header-title-container div.view-header-title");
-        const breadcrumbs = pageParents.getElementsByClassName('view-header-breadcrumb');
-        for (let i = 0; i < breadcrumbs.length; i++) {
-            if (breadcrumbs[i].innerText === '') {continue;}
-            pagePath += breadcrumbs[i].innerText;
-            if (i < breadcrumbs.length) {
-            	pagePath += '/';
-            }
-        }
-        pagePath += pageTitle.innerText+'.md';
-        console.log(pagePath);
-        return pagePath;
-    }
     
 	function changeEditorMode() {
         let is_invisible = source_view.getAttribute('style');
@@ -698,7 +1158,6 @@ export class PageScriptElement {
             switch_button.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svg-icon lucide-book-open"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>';
         	source_view.setAttribute('style', 'width: 100%; height: 100%;');
         	reading_view.setAttribute('style', 'display: none;');
-            const parsed = JSON.stringify({ type: 'update', url: '${file?.path}', text: updatedText});
         } else {
             switch_button.title = 'reading';
             switch_button.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svg-icon lucide-edit-3"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>';
@@ -706,19 +1165,8 @@ export class PageScriptElement {
         	source_view.setAttribute('style', 'display: none;');
         }
 	}
-    
-    function saveText() {
-    	updatedText = document.querySelector("div.cm-content").innerText;
-    	// const data = {
-        //     type: 'update',
-        // 	url: '${file?.path}',
-       	// 	text: updatedText
-    	// };
-        // console.log(data);
-    	// socket.send(JSON.stringify(data));
-	}
 	
-	document.addEventListener("DOMContentLoaded", function () {
+	document.addEventListener("DOMContentLoaded", function () {     
         toggleButton.addEventListener('click', function () {
             let startNavWidth = 250;
             document.querySelector('div.workspace')?.classList.toggle('is-left-sidedock-open');
@@ -753,90 +1201,6 @@ export class PageScriptElement {
         		draggableHr.parentElement.style.width = newWidth + "px";
             }
         }
-		
-		socketIO.on('updatedUserList', (curUser, newPage, fileSubscriptions) => {
-			console.log('---- UPDATEDUSERLIST ----');
-            console.log(fileSubscriptions);
-            console.log(fileSubscriptions[pagePath]);
-            updateActiveUsersOnPageUI(fileSubscriptions[pagePath]);
-            updateNavigationUsersUI(fileSubscriptions);
-		});
-        
-        const activeUsersContainer = document.getElementsByClassName("workspace-user-list").item(0);
-		function updateActiveUsersOnPageUI(users) {
-			activeUsersContainer.innerHTML = ''; // Clear the previous content
-			
-			const maxDisplayUsers = 4;
-		   	
-			for (let i = 0; i < Math.min(users.length, maxDisplayUsers); i++) {
-				const userCircle = createUserCircle(users[i], false);
-				activeUsersContainer.appendChild(userCircle);
-			}
-		   	
-			if (users.length > maxDisplayUsers) {
-				const moreCircle = createMoreCircle(users.length - maxDisplayUsers);
-				activeUsersContainer.appendChild(moreCircle);
-			}
-			console.log(activeUsersContainer);
-		}
-        
-        function updateNavigationUsersUI(fileSubscriptions) {
-            document.querySelectorAll('div.nav-file-users[data-path$=".md"]').forEach((file) => file.innerHTML = '');
-            for (const filePath in fileSubscriptions) {
-                console.log("key: "+filePath);
-                console.log(fileSubscriptions[filePath]);
-                const navFile = document.querySelector('div.nav-file-users[data-path="'+filePath+'"]');
-                console.log(navFile);
-                navFile.innerHTML = '';
-                console.log("Looping over users");
-                for (let i = 0; i < fileSubscriptions[filePath].length; i++) {
-                    const user = fileSubscriptions[filePath][i];
-                    const userCircle = createUserCircle(user, true);
-                    navFile.appendChild(userCircle);
-                    console.log(user);
-                }
-			}
-        }
-	   
-		function createUserCircle(user, isFileNav) {
-			const userItemContainer = document.createElement('div');
-			const userCircle = document.createElement('div');
-			const userSVG = '<svg width="25px" height="25px" viewBox="0 0 24.00 24.00" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="var(--interactive-accent)" stroke-width="0.00024000000000000003"><g id="SVGRepo_bgCarrier" stroke-width="0" transform="translate(2.040000000000001,2.040000000000001), scale(0.83)"><rect x="0" y="0" width="24.00" height="24.00" rx="12" fill="#ffffff" strokewidth="0"></rect></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round" stroke="#CCCCCC" stroke-width="0.43200000000000005"></g><g id="SVGRepo_iconCarrier"> <path opacity="0.5" d="M22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12Z" fill="var(--interactive-accent)"></path> <path d="M16.807 19.0112C15.4398 19.9504 13.7841 20.5 12 20.5C10.2159 20.5 8.56023 19.9503 7.193 19.0111C6.58915 18.5963 6.33109 17.8062 6.68219 17.1632C7.41001 15.8302 8.90973 15 12 15C15.0903 15 16.59 15.8303 17.3178 17.1632C17.6689 17.8062 17.4108 18.5964 16.807 19.0112Z" fill="var(--interactive-accent)"></path> <path d="M12 12C13.6569 12 15 10.6569 15 9C15 7.34315 13.6569 6 12 6C10.3432 6 9.00004 7.34315 9.00004 9C9.00004 10.6569 10.3432 12 12 12Z" fill="var(--interactive-accent)"></path> </g></svg>';
-		    
-			userCircle.setAttribute('class', 'user-circle');
-			userCircle.style.position = 'relative';
-			userCircle.style.display = 'inline flex';
-			userCircle.style.borderRadius = '50%';
-			userCircle.style.border = '2px solid';
-		    
-			userItemContainer.title = user.username;
-            console.log('=========');
-            console.log(user);
-            console.log(userItemContainer.title);
-            userItemContainer.style.display = 'flex';
-            userItemContainer.style.cursor = 'pointer';
-            if (!isFileNav) {
-            	userItemContainer.style.justifyContent = 'center';
-            }
-			userItemContainer.appendChild(userCircle);
-		   	
-			userCircle.innerHTML = userSVG;
-			userCircle.style.color = user.userColor;
-		   	
-			return userItemContainer;
-		}
-        
-	   	function createMoreCircle(count) {
-		   	const moreCircle = document.createElement('div');
-			moreCircle.className = 'moreCircle';
-			moreCircle.textContent = '+'+count.toString();
-			moreCircle.title = 'Click to view more users';
-			moreCircle.addEventListener('click', () => {
-				// Implement logic to show a modal or expand the user list
-				alert('List of all users: '+socketIO.rooms[pagePath]);
-			});
-			return moreCircle;
-	   	}
     });
 </script>`;
 	}

@@ -5,62 +5,56 @@ import {Auth, ReplaceableVariables} from "../settings/settings";
 import {LoginForm} from "../objects/pages/loginForm";
 import {Page} from "../objects/pages/page";
 import {NavigationOrder, SortOrder, SortType} from "../objects/pages/navigationResolver";
-import {CollabUser} from "./controller";
+import {CustomMarkdownRenderer} from "../utils/renderer_tools/customMarkdownRenderer";
 
 export const contentResolver = async (
-	path: string,
-	referer: string,
-	plugin: CollabPlugin,
+	fpath: string, referer: string, plugin: CollabPlugin,
+	markdownRenderer: CustomMarkdownRenderer,
 	extraVars: ReplaceableVariables[] = [],
 ) => {
-	if (path == INTERNAL_CSS_ENPOINT) {
-		const fullCssText =
-			Array.from(document.styleSheets)
-				.flatMap((styleSheet) =>
-					Array.from(styleSheet.cssRules).map((cssRule) => cssRule.cssText)
-			)
-				.join('\n') +
-			`\n.markdown-preview-view, .markdown-embed-content {height: unset !important;}`;
+	if (fpath == INTERNAL_CSS_ENPOINT) {
+		const fullCssText = Array.from(document.styleSheets)
+			.flatMap((styleSheet) =>
+				Array.from(styleSheet.cssRules).map((cssRule) => cssRule.cssText))
+			.join('\n') + `\n.markdown-preview-view, .markdown-embed-content {height: unset !important;}`;
 		return {
 			contentType: 'text/css',
 			payload: fullCssText,
+			doc: '',
 		};
 	}
-	if (path == INTERNAL_LOGIN_ENPOINT) {
+	if (fpath == INTERNAL_LOGIN_ENPOINT) {
 		let nonce = extraVars[1].varValue;
-		// const loginForm = new Page(plugin, path, referer, nonce).retrieveHTML();
 		let loginForm: string = '';
 		if (plugin.settings.useAuthentication == Auth.None) {
-			loginForm = new LoginForm(plugin, path, referer, nonce).usernameLogin();
+			loginForm = new LoginForm(plugin, fpath, referer, nonce).usernameLogin();
 		} else {
-			loginForm = new LoginForm(plugin, path, referer, nonce).retrieveHtml();
+			loginForm = new LoginForm(plugin, fpath, referer, nonce).retrieveHtml();
 		}
 		return {
 			contentType: 'text/css',
 			payload: loginForm,
+			doc: '',
 		};
 	}
-
-	const file = plugin.app.metadataCache.getFirstLinkpathDest(path, referer);
+	const file = plugin.app.metadataCache.getFirstLinkpathDest(fpath, referer);
 	if (!file) return null;
 
-	const payload = await plugin.app.vault.readBinary(file);
-
 	if (file.extension === 'md') {
-		// let nonce = extraVars[1].varValue;
-		// let page: Page = new Page(plugin, path, referer);
-		// const pageHead = new PageHead(plugin.app.vault.getName(), plugin.settings.faviconLink, INTERNAL_CSS_ENPOINT);
-		// const pageBody = new PageBody(plugin, plugin.app.workspace, ``, Buffer.from(payload));
+		const markdown = await file.vault.read(file);
 		const navigationDefault: NavigationOrder = {order: SortOrder.Descending, type: SortType.FileName};
-		const page = new Page(plugin, Buffer.from(payload), path, referer, navigationDefault);
+		const page = new Page(plugin, markdownRenderer, file, navigationDefault);
+		const renderedMarkdown = await page.retrieveHTML(markdown)
 		return {
 			contentType: 'text/html',
-			payload: page.retrieveHTML(),
+			payload: renderedMarkdown,
+			doc: markdown,
 		};
 	}
-
+	const payload = await plugin.app.vault.readBinary(file);
 	return {
 		contentType: mime.lookup(file.extension) || 'text',
-		payload: Buffer.from(payload)
+		payload: Buffer.from(payload),
+		doc: payload,
 	};
 };
